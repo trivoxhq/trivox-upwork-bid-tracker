@@ -31,7 +31,7 @@ export default async function DashboardBidsPage() {
       <div className="relative mt-8 min-w-0">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-px left-4 right-4 h-px bg-linear-to-r from-transparent via-brand-primary/25 to-transparent sm:left-10 sm:right-10"
+          className="pointer-events-none absolute -top-px left-4 right-4 h-px bg-linear-to-r from-transparent via-brand-primary/25 to-transparent dark:via-brand-primary/35 sm:left-10 sm:right-10"
         />
 
         <p className="mt-8 text-[13px] text-text-secondary">
@@ -44,7 +44,7 @@ export default async function DashboardBidsPage() {
           for profiles, niches, and win trends.
         </p>
 
-        <div className="mt-8 rounded-[22px] border border-border/55 bg-linear-to-br from-bg-primary via-white/92 to-[#f3f8f5]/95 p-px shadow-[0_12px_40px_rgb(17_17_17_/0.07)] ring-1 ring-white/85">
+        <div className="mt-8 rounded-[22px] border border-border/55 bg-linear-to-br from-bg-primary via-white/92 to-[#f3f8f5]/95 p-px shadow-[0_12px_40px_rgb(17_17_17_/0.07)] ring-1 ring-white/85 dark:border-border dark:bg-[linear-gradient(to_bottom_right,#303030,#262626,#212121)] dark:shadow-[0_12px_40px_rgb(0_0_0_/0.48)] dark:ring-[rgb(51_51_51_/0.85)]">
           <div className="rounded-[21px] bg-bg-primary/70 px-2 py-3 sm:p-4 md:p-5">
             <BidsTable
               bids={bids}

@@ -21,6 +21,7 @@ import type { LoginResponse } from "@/app/login/types";
 import { LoginPreviewCarousel } from "@/components/login/LoginPreviewCarousel";
 import { LoginOfficeNotice } from "@/app/login/login-office-notice";
 import { LoginReauthNotice } from "@/app/login/login-reauth-notice";
+import { ThemeCycleButton } from "@/components/theme/theme-cycle-button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,25 +82,25 @@ export default function LoginPage() {
   };
 
   const inputBaseClass =
-    "w-full rounded-md border bg-bg-secondary py-2.5 pl-11 pr-4 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out placeholder:text-text-secondary/60 focus:border-brand-primary focus:ring-2 focus:ring-green-100 disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-md border bg-bg-secondary py-2.5 pl-11 pr-4 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out placeholder:text-text-secondary/60 focus:border-brand-primary focus:ring-2 focus:ring-green-100 dark:bg-bg-primary dark:focus:ring-brand-primary/25 disabled:cursor-not-allowed disabled:opacity-60";
   const inputErrorClass = errorMessage
-    ? "border-danger focus:border-danger focus:ring-red-100"
+    ? "border-danger focus:border-danger focus:ring-red-100 dark:focus:ring-danger/30"
     : "border-border";
 
   return (
     <motion.main
-      className="min-h-dvh bg-bg-primary supports-[min-height:100dvh]:min-h-dvh lg:min-h-screen"
+      className="min-h-dvh bg-bg-primary supports-[min-height:100dvh]:min-h-dvh dark:bg-bg-secondary lg:min-h-screen"
       initial={pageAnimation.initial}
       animate={pageAnimation.animate}
       transition={pageAnimation.transition}
     >
       <div className="w-full">
-        <section className="grid min-h-dvh w-full grid-cols-1 overflow-x-clip bg-bg-primary supports-[min-height:100dvh]:min-h-dvh lg:min-h-screen lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
-          <div className="relative hidden min-h-0 flex-col border-r border-border/70 bg-linear-to-br from-[#eef2ed] via-[#f7f9f7] to-[#e8edf1] lg:flex lg:pb-[max(3rem,env(safe-area-inset-bottom))] lg:pt-[max(1.25rem,env(safe-area-inset-top))] xl:pb-[max(3.5rem,env(safe-area-inset-bottom))]">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_24%_18%,rgba(16,138,0,0.14),transparent_56%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_78%_84%,rgba(55,138,221,0.12),transparent_65%)]" />
-            <div className="pointer-events-none absolute left-[10%] top-6 h-20 w-20 rounded-full bg-brand-primary/10 blur-2xl sm:left-10 sm:top-8 sm:h-24 sm:w-24 lg:top-8" />
-            <div className="pointer-events-none absolute -right-16 top-0 hidden h-full w-28 rotate-6 bg-bg-primary/95 lg:block" />
+        <section className="grid min-h-dvh w-full grid-cols-1 overflow-x-clip bg-bg-primary supports-[min-height:100dvh]:min-h-dvh dark:bg-bg-secondary lg:min-h-screen lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+          <div className="relative hidden min-h-0 flex-col border-r border-border/70 bg-linear-to-br from-[#eef2ed] via-[#f7f9f7] to-[#e8edf1] dark:border-border dark:from-[#1a1a1a] dark:via-[#171717] dark:to-[#141414] lg:flex lg:pb-[max(3rem,env(safe-area-inset-bottom))] lg:pt-[max(1.25rem,env(safe-area-inset-top))] xl:pb-[max(3.5rem,env(safe-area-inset-bottom))]">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_24%_18%,rgba(16,138,0,0.14),transparent_56%)] dark:bg-[radial-gradient(ellipse_90%_70%_at_24%_18%,rgb(16_163_127_/0.12),transparent_58%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_78%_84%,rgba(55,138,221,0.12),transparent_65%)] dark:bg-[radial-gradient(ellipse_70%_60%_at_78%_84%,rgb(255_255_255_/0.04),transparent_65%)]" />
+            <div className="pointer-events-none absolute left-[10%] top-6 h-20 w-20 rounded-full bg-brand-primary/10 blur-2xl dark:bg-[rgb(16_163_127_/0.12)] sm:left-10 sm:top-8 sm:h-24 sm:w-24 lg:top-8" />
+            <div className="pointer-events-none absolute -right-16 top-0 hidden h-full w-28 rotate-6 bg-bg-primary/95 dark:bg-bg-primary/90 lg:block" />
             <div className="relative flex min-h-0 flex-1 flex-col px-6 py-10 lg:min-h-[min(100dvh,680px)] lg:px-10 xl:min-h-[min(760px,calc(100dvh-2rem))] xl:px-14 2xl:px-16">
               <LoginPreviewCarousel />
             </div>
@@ -109,7 +110,10 @@ export default function LoginPage() {
             className="relative flex min-h-0 items-center justify-center bg-bg-primary px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8 sm:pb-12 sm:pt-14 lg:px-10 xl:px-12"
             aria-labelledby="login-heading"
           >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_70%_15%,rgba(16,138,0,0.05),transparent_55%)]" />
+            <div className="pointer-events-auto absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-20 sm:right-6 sm:top-[max(1rem,env(safe-area-inset-top))]">
+              <ThemeCycleButton iconOnly className="border-border/70 shadow-md" />
+            </div>
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_70%_15%,rgba(16,138,0,0.05),transparent_55%)] dark:bg-[radial-gradient(ellipse_70%_40%_at_70%_15%,rgb(255_255_255_/0.04),transparent_55%)]" />
             <motion.section
               className="relative z-10 mx-auto w-full max-w-[420px]"
               initial={cardAnimation.initial}

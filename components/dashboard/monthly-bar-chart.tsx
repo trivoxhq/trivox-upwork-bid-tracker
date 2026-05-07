@@ -10,6 +10,7 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { barChartThemeAppearance } from "@/lib/chart/bar-appearance";
 import { Bar } from "react-chartjs-2";
 import {
   DASH_SECTION_GAP,
@@ -18,6 +19,7 @@ import {
 } from "@/components/dashboard/dashboard-classes";
 import { ChartPlaceholderSkeleton } from "@/components/dashboard/dashboard-skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useIsDarkTheme } from "@/hooks/use-is-dark-theme";
 import { useStatsPoll } from "@/hooks/use-stats-poll";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -51,6 +53,7 @@ function isMonthlyPayload(json: unknown): json is MonthlyRow[] {
 }
 
 export function MonthlyBarChart({ months = 6 }: { months?: number }) {
+  const isDark = useIsDarkTheme();
   const [rows, setRows] = useState<MonthlyRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,8 +143,9 @@ export function MonthlyBarChart({ months = 6 }: { months?: number }) {
     };
   }, [rows]);
 
-  const options = useMemo<ChartOptions<"bar">>(
-    () => ({
+  const options = useMemo<ChartOptions<"bar">>(() => {
+    const a = barChartThemeAppearance(isDark);
+    return {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
@@ -155,35 +159,38 @@ export function MonthlyBarChart({ months = 6 }: { months?: number }) {
             padding: 16,
             usePointStyle: true,
             pointStyle: "rectRounded",
-            color: "#666666",
+            color: a.legendColor,
             font: { size: 12, weight: 500 },
           },
         },
         tooltip: {
-          backgroundColor: "rgba(17, 17, 17, 0.92)",
+          backgroundColor: a.tooltipBg,
+          borderColor: a.tooltipBorder,
+          borderWidth: 1,
           padding: 10,
           cornerRadius: 8,
           titleMarginBottom: 6,
+          titleColor: a.tooltipTitle,
+          bodyColor: a.tooltipBody,
         },
       },
       scales: {
         x: {
           stacked: false,
           grid: { display: false },
-          ticks: { color: "#666666", font: { size: 11 }, maxRotation: 0 },
+          ticks: { color: a.tickColor, font: { size: 11 }, maxRotation: 0 },
           border: { display: false },
         },
         y: {
           stacked: false,
           beginAtZero: true,
-          grid: { color: "rgba(221, 221, 221, 0.6)" },
-          ticks: { color: "#666666", font: { size: 11 }, precision: 0 },
+          grid: { color: a.gridColor },
+          ticks: { color: a.tickColor, font: { size: 11 }, precision: 0 },
           border: { display: false },
         },
       },
-    }),
-    [],
-  );
+    };
+  }, [isDark]);
 
   const titleSuffix = `${months} month${months === 1 ? "" : "s"}`;
 

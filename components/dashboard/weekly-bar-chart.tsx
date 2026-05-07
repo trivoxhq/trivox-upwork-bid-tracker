@@ -10,6 +10,7 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { barChartThemeAppearance } from "@/lib/chart/bar-appearance";
 import { Bar } from "react-chartjs-2";
 import {
   DASH_SECTION_GAP,
@@ -18,6 +19,7 @@ import {
 } from "@/components/dashboard/dashboard-classes";
 import { ChartPlaceholderSkeleton } from "@/components/dashboard/dashboard-skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useIsDarkTheme } from "@/hooks/use-is-dark-theme";
 import { useStatsPoll } from "@/hooks/use-stats-poll";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -62,6 +64,7 @@ function formatDayLabel(ymd: string): string {
 }
 
 export function WeeklyBarChart() {
+  const isDark = useIsDarkTheme();
   const [rows, setRows] = useState<WeeklyRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,8 +146,9 @@ export function WeeklyBarChart() {
     };
   }, [rows]);
 
-  const options = useMemo<ChartOptions<"bar">>(
-    () => ({
+  const options = useMemo<ChartOptions<"bar">>(() => {
+    const a = barChartThemeAppearance(isDark);
+    return {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
@@ -161,15 +165,19 @@ export function WeeklyBarChart() {
             padding: 16,
             usePointStyle: true,
             pointStyle: "rectRounded",
-            color: "#666666",
+            color: a.legendColor,
             font: { size: 12, weight: 500 },
           },
         },
         tooltip: {
-          backgroundColor: "rgba(17, 17, 17, 0.92)",
+          backgroundColor: a.tooltipBg,
+          borderColor: a.tooltipBorder,
+          borderWidth: 1,
           padding: 10,
           cornerRadius: 8,
           titleMarginBottom: 6,
+          titleColor: a.tooltipTitle,
+          bodyColor: a.tooltipBody,
         },
       },
       scales: {
@@ -177,7 +185,7 @@ export function WeeklyBarChart() {
           stacked: false,
           grid: { display: false },
           ticks: {
-            color: "#666666",
+            color: a.tickColor,
             font: { size: 11 },
             maxRotation: 45,
             minRotation: 0,
@@ -187,18 +195,17 @@ export function WeeklyBarChart() {
         y: {
           stacked: false,
           beginAtZero: true,
-          grid: { color: "rgba(221, 221, 221, 0.6)" },
+          grid: { color: a.gridColor },
           ticks: {
-            color: "#666666",
+            color: a.tickColor,
             font: { size: 11 },
             precision: 0,
           },
           border: { display: false },
         },
       },
-    }),
-    [],
-  );
+    };
+  }, [isDark]);
 
   if (loading) {
     return (

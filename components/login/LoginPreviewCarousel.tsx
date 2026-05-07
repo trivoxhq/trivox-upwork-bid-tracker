@@ -140,7 +140,7 @@ export function LoginPreviewCarousel() {
               className={`flex min-h-0 min-w-0 flex-col justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5 md:p-6 ${PREVIEW_WIDGET_CTA_CLASS} ${floatWidgets ? "will-change-transform" : ""}`}
               {...previewWidgetFloatProps(floatWidgets, 4.5, 7.95, 0.2)}
             >
-              <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-primary to-[#0c6e00] text-xl font-medium leading-none text-white shadow-md shadow-brand-primary/20 sm:h-12 sm:w-12 sm:text-2xl">
+              <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-primary to-brand-hover text-xl font-medium leading-none text-white shadow-md shadow-brand-primary/20 sm:h-12 sm:w-12 sm:text-2xl">
                 {PREVIEW_SLIDE_1.CTA_PLUS}
               </div>
               <div className="min-w-0 flex-1">
@@ -305,7 +305,7 @@ export function LoginPreviewCarousel() {
       </div>
 
       <div className="relative z-10 min-h-0 flex-1">
-        <div className="relative h-full min-h-[min(42dvh,300px)] flex-1 rounded-xl border border-white/65 bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_50px_-28px_rgb(17_17_17/0.08)] backdrop-blur-md min-[400px]:min-h-[min(46dvh,360px)] sm:min-h-[min(44dvh,400px)] sm:rounded-2xl md:min-h-[min(48dvh,440px)] lg:min-h-[min(52dvh,480px)]">
+        <div className="relative h-full min-h-[min(42dvh,300px)] flex-1 rounded-xl border border-white/65 bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_50px_-28px_rgb(17_17_17/0.08)] backdrop-blur-md dark:border-border dark:bg-[rgb(48_48_48_/0.82)] dark:shadow-[inset_0_1px_0_rgb(255_255_255_/0.05),0_18px_50px_-28px_rgb(0_0_0_/0.5)] min-[400px]:min-h-[min(46dvh,360px)] sm:min-h-[min(44dvh,400px)] sm:rounded-2xl md:min-h-[min(48dvh,440px)] lg:min-h-[min(52dvh,480px)]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={slideIndex}
@@ -333,7 +333,7 @@ export function LoginPreviewCarousel() {
         </div>
       </div>
 
-      <div className="relative z-10 mt-4 flex touch-manipulation items-center justify-between gap-3 rounded-xl border border-white/70 bg-white/55 px-2 py-2 shadow-sm backdrop-blur-md sm:mt-6 sm:gap-4 sm:rounded-2xl sm:px-3">
+      <div className="relative z-10 mt-4 flex touch-manipulation items-center justify-between gap-3 rounded-xl border border-white/70 bg-white/55 px-2 py-2 shadow-sm backdrop-blur-md dark:border-border dark:bg-[rgb(42_42_42_/0.92)] dark:shadow-[0_6px_28px_rgb(0_0_0_/0.45)] sm:mt-6 sm:gap-4 sm:rounded-2xl sm:px-3">
         <button
           type="button"
           onClick={prev}
@@ -360,7 +360,7 @@ export function LoginPreviewCarousel() {
               onClick={() => goTo(i)}
               className={`rounded-full transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 ${
                 i === slideIndex
-                  ? "h-2.5 w-8 bg-brand-primary shadow-[0_0_0_3px_rgba(16,138,0,0.14)]"
+                  ? "h-2.5 w-8 bg-brand-primary shadow-[0_0_0_3px_rgba(16,138,0,0.14)] dark:shadow-[0_0_0_3px_rgb(255_255_255_/0.14)]"
                   : "h-2.5 w-2.5 bg-border hover:bg-text-secondary/40"
               }`}
               aria-label={loginPreviewAriaGoToSlide(i)}

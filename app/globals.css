@@ -1,16 +1,128 @@
 @import "tailwindcss";
 
+/** Class-based dark mode (`html.dark`). */
+@variant dark (.dark &);
+
+@property --color-text-primary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #111111;
+}
+@property --color-text-secondary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #666666;
+}
+@property --color-bg-primary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffffff;
+}
+@property --color-bg-secondary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f5f5f5;
+}
+@property --color-bg-hover {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ebebeb;
+}
+@property --color-border {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #dddddd;
+}
+@property --color-brand-primary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #108a00;
+}
+@property --color-brand-hover {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e7a00;
+}
+@property --color-danger {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #d93025;
+}
+@property --color-warning {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ba7517;
+}
+@property --color-info {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #378add;
+}
+
 :root {
-  --color-text-primary: #111111;
-  --color-text-secondary: #666666;
-  --color-bg-primary: #ffffff;
+  --bg-main: #ffffff;
+  --bg-sidebar: #f7f7f7;
+  --bg-hover: #ebebeb;
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --border-color: #dddddd;
+  --accent-green: #108a00;
+  --input-bg: #ffffff;
+  --code-bg: #f5f5f5;
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-bg-primary: var(--input-bg);
   --color-bg-secondary: #f5f5f5;
-  --color-border: #dddddd;
-  --color-brand-primary: #108a00;
+  --color-bg-hover: var(--bg-hover);
+  --color-border: var(--border-color);
+  --color-brand-primary: var(--accent-green);
   --color-brand-hover: #0e7a00;
   --color-danger: #d93025;
   --color-warning: #ba7517;
   --color-info: #378add;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  /* Dark palette (requested tokens) */
+  --bg-main: #212121;
+  --bg-sidebar: #171717;
+  --bg-hover: #2a2a2a;
+  --text-primary: #ececec;
+  --text-secondary: #b4b4b4;
+  --border-color: #333333;
+  --accent-green: #10a37f;
+  --input-bg: #303030;
+  --code-bg: #1e1e1e;
+
+  /* Semantic tokens consumed by Tailwind @theme + components */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-bg-secondary: var(--bg-main);
+  --color-bg-primary: var(--input-bg);
+  --color-bg-hover: var(--bg-hover);
+  --color-border: var(--border-color);
+  --color-brand-primary: var(--accent-green);
+  --color-brand-hover: #12b892;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+  --color-info: #5a9fd4;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    transition-property: --color-bg-primary, --color-bg-secondary, --color-bg-hover, --color-text-primary,
+      --color-text-secondary, --color-border, --color-brand-primary, --color-brand-hover, --color-danger,
+      --color-warning, --color-info;
+    transition-duration: 0.48s;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
 @theme inline {
@@ -19,6 +131,7 @@
   --color-text-secondary: var(--color-text-secondary);
   --color-bg-primary: var(--color-bg-primary);
   --color-bg-secondary: var(--color-bg-secondary);
+  --color-bg-hover: var(--color-bg-hover);
   --color-border: var(--color-border);
   --color-brand-primary: var(--color-brand-primary);
   --color-brand-hover: var(--color-brand-hover);
@@ -28,7 +141,7 @@
 }
 
 body {
-  background: var(--color-bg-primary);
+  background-color: var(--color-bg-secondary);
   color: var(--color-text-primary);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
@@ -40,6 +153,16 @@ body {
   }
   50% {
     box-shadow: 0 16px 36px rgb(17 17 17 / 0.1), 0 0 0 1px rgb(16 138 0 / 0.2);
+  }
+}
+
+@keyframes premiumShadowPulseDark {
+  0%,
+  100% {
+    box-shadow: 0 10px 34px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(51 51 51 / 0.9);
+  }
+  50% {
+    box-shadow: 0 18px 42px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(16 163 127 / 0.35);
   }
 }
 
@@ -63,6 +186,15 @@ body {
   animation: premiumShadowPulse 4s ease-in-out infinite;
 }
 
+html.dark .premium-login-card::before {
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgb(255 255 255 / 0.06) 50%,
+    transparent 75%
+  );
+}
+
 .premium-login-card::before {
   content: "";
   position: absolute;
@@ -75,6 +207,10 @@ body {
   );
   pointer-events: none;
   animation: softGlowSweep 4.5s ease-in-out infinite;
+}
+
+html.dark .premium-login-card {
+  animation-name: premiumShadowPulseDark;
 }
 
 .card-surface {
@@ -90,6 +226,21 @@ body {
   padding: 1.5rem;
 }
 
+html.dark .ui-card {
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(51 51 51 / 0.6);
+}
+
+/* Inline / fenced code surfaces in dark mode */
+html.dark pre,
+html.dark .code-block,
+html.dark .ui-code {
+  background-color: var(--code-bg);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
 .ui-input {
   width: 100%;
   border: 1px solid var(--color-border);
@@ -103,7 +254,7 @@ body {
 
 .ui-input:focus {
   border-color: var(--color-brand-primary);
-  box-shadow: 0 0 0 2px rgb(16 138 0 / 0.2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand-primary) 40%, transparent);
 }
 
 /* Login preview — vertical marquee (slide 3 timeline) */
@@ -181,4 +332,16 @@ body {
   .sidebar-scroll {
     scrollbar-color: rgb(17 17 17 / 0.22) transparent;
   }
+}
+
+.dark .sidebar-scroll {
+  scrollbar-color: rgb(255 255 255 / 0.16) transparent;
+}
+
+.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.22);
 }

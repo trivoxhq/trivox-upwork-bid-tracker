@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { VscCollapseAll, VscExpandAll } from "react-icons/vsc";
 import {
   DASH_BTN_DANGER_GHOST,
@@ -16,6 +16,8 @@ import { DashboardAddBidTrigger } from "@/components/dashboard/dashboard-add-bid
 import { DashboardExportCsvButton } from "@/components/dashboard/dashboard-export-csv-button";
 import { DashboardResetBidsButton } from "@/components/dashboard/dashboard-reset-bids-button";
 import { DashboardLogoutButton } from "@/components/dashboard/logout-button";
+import { ThemeCycleButton } from "@/components/theme/theme-cycle-button";
+import { useIsDarkTheme } from "@/hooks/use-is-dark-theme";
 
 export type DashboardShellUser = {
   name: string;
@@ -32,7 +34,7 @@ type DashboardShellProps = {
 const SIDEBAR_COLLAPSED_KEY = "upwork-bid-tracker-sidebar-collapsed";
 
 const SIDEBAR_SURFACE =
-  "relative overflow-hidden bg-[linear-gradient(165deg,#ffffff_0%,#f8faf8_42%,#eef2ee_100%)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-px before:bg-gradient-to-r before:from-transparent before:via-brand-primary/35 before:to-transparent before:content-['']";
+  "relative overflow-hidden bg-[linear-gradient(165deg,#ffffff_0%,#f8faf8_42%,#eef2ee_100%)] dark:bg-[linear-gradient(165deg,#191919_0%,#171717_50%,#141414_100%)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-px before:bg-gradient-to-r before:from-transparent before:via-brand-primary/35 before:to-transparent before:content-[''] dark:before:via-[rgb(16_163_127_/0.35)]";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -83,7 +85,7 @@ function SidebarRailToggle({ collapsed, onToggle }: { collapsed: boolean; onTogg
       onClick={onToggle}
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.96 }}
-      className="shrink-0 rounded-lg border border-border/50 bg-white/70 p-1.5 text-text-secondary shadow-sm hover:border-border/70 hover:bg-white hover:text-text-primary"
+      className="shrink-0 rounded-lg border border-border/50 bg-white/70 p-1.5 text-text-secondary shadow-sm hover:border-border/70 hover:bg-white hover:text-text-primary dark:border-border dark:bg-bg-primary dark:hover:border-border dark:hover:bg-bg-hover dark:hover:text-text-primary"
       aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
     >
@@ -99,8 +101,8 @@ function NavIconLayout({ children, active }: { children: ReactNode; active: bool
     <span
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${DASH_TRANSITION} [&>svg]:h-[17px] [&>svg]:w-[17px] ${
         active
-          ? "bg-white text-brand-primary shadow-sm ring-1 ring-brand-primary/25"
-          : "bg-white/70 text-text-secondary shadow-sm ring-1 ring-border/50 group-hover:bg-white group-hover:text-text-primary group-hover:ring-border/70"
+          ? "bg-white text-brand-primary shadow-sm ring-1 ring-brand-primary/25 dark:bg-bg-primary dark:shadow-md dark:ring-brand-primary/40"
+          : "bg-white/70 text-text-secondary shadow-sm ring-1 ring-border/50 group-hover:bg-white group-hover:text-text-primary group-hover:ring-border/70 dark:bg-bg-primary/50 dark:text-text-secondary dark:ring-border/55 dark:group-hover:bg-bg-hover dark:group-hover:text-text-primary dark:group-hover:ring-border/70"
       }`}
     >
       {children}
@@ -131,14 +133,14 @@ function SidebarNavLink({
         aria-current={active ? "page" : undefined}
         aria-label={collapsed ? label : undefined}
         title={collapsed ? label : undefined}
-        className={`group relative flex items-center rounded-xl text-[13px] font-semibold leading-snug tracking-tight ${DASH_TRANSITION} focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+        className={`group relative flex items-center rounded-xl text-[13px] font-semibold leading-snug tracking-tight ${DASH_TRANSITION} focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-brand-primary/40 ${
           collapsed ? "justify-center px-0 py-2" : "gap-3 px-2.5 py-2.5"
         } ${
           active
             ? collapsed
               ? "text-brand-primary"
-              : "bg-gradient-to-r from-brand-primary/14 to-brand-primary/6 text-brand-primary shadow-[0_1px_2px_rgb(17_17_17_/0.04)]"
-            : "text-text-secondary hover:bg-white/90 hover:text-text-primary hover:shadow-sm"
+              : "bg-gradient-to-r from-brand-primary/14 to-brand-primary/6 text-brand-primary shadow-[0_1px_2px_rgb(17_17_17_/0.04)] dark:from-brand-primary/20 dark:to-brand-primary/8 dark:text-brand-primary dark:shadow-[0_1px_2px_rgb(0_0_0_/0.35)]"
+            : "text-text-secondary hover:bg-white/90 hover:text-text-primary hover:shadow-sm dark:hover:bg-bg-hover dark:hover:text-text-primary"
         }`}
       >
         <span className={`${DASH_TRANSITION} ${collapsed ? "" : "group-hover:translate-x-0.5"}`}>
@@ -191,7 +193,7 @@ function SidebarQuickActions({
             onDone?.();
             router.refresh();
           }}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-bg-primary text-text-secondary shadow-sm hover:bg-white hover:text-text-primary"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-bg-primary text-text-secondary shadow-sm hover:bg-white hover:text-text-primary dark:border-border dark:bg-bg-primary dark:hover:border-border dark:hover:bg-bg-hover dark:hover:text-text-primary"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
@@ -232,7 +234,7 @@ function SidebarQuickActions({
   }
 
   return (
-    <div className="rounded-2xl border border-border/45 bg-white/55 p-3 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.9)] backdrop-blur-[2px]">
+    <div className="rounded-2xl border border-border/45 bg-white/55 p-3 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.9)] backdrop-blur-[2px] dark:border-border/48 dark:bg-bg-primary/42 dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.06)]">
       {expandedBody}
     </div>
   );
@@ -250,10 +252,10 @@ function SidebarProfileHeader({
   const roleLabel = user.role === "admin" ? "Administrator" : "Member";
   const hideNameLine = nameMatchesInitialsOnly(user.name, initials);
   const avatarClass =
-    "flex items-center justify-center rounded-md border border-border/60 bg-bg-secondary text-[11px] font-medium tabular-nums tracking-tight text-text-primary shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.65)]";
+    "flex items-center justify-center rounded-md border border-border/60 bg-bg-secondary text-[11px] font-medium tabular-nums tracking-tight text-text-primary shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.65)] dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.08)]";
 
   return (
-    <div className="min-w-0 flex-1 rounded-xl  bg-white/45 px-2 py-1 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)]">
+    <div className="min-w-0 flex-1 rounded-xl bg-white/45 px-2 py-1 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)] dark:bg-bg-primary/38 dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.06)]">
       <div className="flex min-w-0 items-start gap-2">
         <Link
           href="/dashboard"
@@ -282,18 +284,25 @@ function SidebarProfileHeader({
 }
 
 function SidebarUserFooter({ collapsed }: { collapsed: boolean }) {
+  const footerBg =
+    "border-t border-border/50 bg-gradient-to-t from-white/90 via-[#f4f6f4]/95 to-transparent dark:from-[#171717]/98 dark:via-[#171717]/98 dark:to-transparent";
+
   if (collapsed) {
     return (
-      <div className="relative flex shrink-0 flex-col items-center border-t border-border/50 bg-gradient-to-t from-white/90 via-[#f4f6f4]/95 to-transparent px-2 py-3">
+      <div className={`relative flex shrink-0 flex-col items-center gap-2 px-2 py-3 ${footerBg}`}>
+        <ThemeCycleButton iconOnly className="mt-0 border-border/75" />
         <DashboardLogoutButton iconOnly className="mt-0" />
       </div>
     );
   }
 
   return (
-    <div className="relative shrink-0 border-t border-border/50 bg-gradient-to-t from-white/90 via-[#f4f6f4]/95 to-transparent px-4 py-4">
+    <div className={`relative shrink-0 px-4 py-4 ${footerBg}`}>
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-border/80 to-transparent" aria-hidden />
-      <DashboardLogoutButton className="mt-0 w-full rounded-xl border-border/80 shadow-sm" />
+      <div className="flex flex-col gap-2.5">
+        <ThemeCycleButton className="border-border/70" />
+        <DashboardLogoutButton className="mt-0 w-full rounded-xl border-border/80 shadow-sm" />
+      </div>
     </div>
   );
 }
@@ -314,9 +323,9 @@ function SidebarRailChevron({ open }: { open: boolean }) {
 }
 
 const SIDEBAR_ACCORDION_SHELL =
-  "rounded-2xl border border-border/40 bg-white/45 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)] backdrop-blur-[2px] overflow-hidden";
+  "rounded-2xl border border-border/40 bg-white/45 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)] backdrop-blur-[2px] overflow-hidden dark:border-border dark:bg-bg-primary/35 dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.05)]";
 
-const SIDEBAR_ACCORDION_TRIGGER = `flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left ${DASH_TRANSITION} hover:bg-white/55 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-primary/25`;
+const SIDEBAR_ACCORDION_TRIGGER = `flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left ${DASH_TRANSITION} hover:bg-white/55 dark:hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-primary/25`;
 
 function SidebarScrollable({
   user,
@@ -419,7 +428,7 @@ function SidebarScrollable({
       <div className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4">
         <div className="flex flex-col items-center">
           <span className="mb-2 h-1 w-1 rounded-full bg-brand-primary/50" aria-hidden />
-          <nav className={`${navClass} rounded-2xl border border-border/40 bg-white/45 p-1.5 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)] backdrop-blur-[2px]`} aria-label="Dashboard sections">
+          <nav className={`${navClass} ${SIDEBAR_ACCORDION_SHELL} p-1.5`} aria-label="Dashboard sections">
             {navLinks}
           </nav>
         </div>
@@ -502,6 +511,13 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();
   const mobileHeaderInitials = initialsFromName(user.name);
   const mobileHideName = nameMatchesInitialsOnly(user.name, mobileHeaderInitials);
+  const isDarkDashboard = useIsDarkTheme();
+
+  const dotPatternUrl = useMemo(() => {
+    const fill = isDarkDashboard ? "%23999999" : "%23111111";
+    const op = isDarkDashboard ? "0.12" : "0.04";
+    return `url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='0.65' fill='${fill}' fill-opacity='${op}'/%3E%3C/svg%3E")`;
+  }, [isDarkDashboard]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -525,12 +541,12 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   }, [pathname]);
 
   const mainSurface =
-    "bg-[radial-gradient(100%_60%_at_100%_0%,rgb(16_138_0_/0.07),transparent_52%),linear-gradient(180deg,rgb(250_251_250)_0%,rgb(255_255_255)_38%,rgb(252_253_252)_100%)]";
+    "bg-[radial-gradient(100%_60%_at_100%_0%,rgb(16_138_0_/0.07),transparent_52%),linear-gradient(180deg,rgb(250_251_250)_0%,rgb(255_255_255)_38%,rgb(252_253_252)_100%)] dark:bg-[radial-gradient(100%_60%_at_100%_0%,rgb(16_163_127_/0.06),transparent_52%),linear-gradient(180deg,#212121,#1f1f1f,#1c1c1c)]";
 
   return (
     <div className="flex min-h-dvh min-w-0 flex-col bg-bg-secondary/40 md:h-dvh md:max-h-dvh md:flex-row md:overflow-hidden">
       <aside
-        className={`z-20 hidden h-full min-h-0 shrink-0 flex-col border-border/60 transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex ${SIDEBAR_SURFACE} ${DASH_DRAWER_PANEL} border-r shadow-[4px_0_32px_rgb(17_17_17_/0.05)] will-change-[width] ${
+        className={`z-20 hidden h-full min-h-0 shrink-0 flex-col border-border/60 transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex ${SIDEBAR_SURFACE} ${DASH_DRAWER_PANEL} border-r shadow-[4px_0_32px_rgb(17_17_17_/0.05)] dark:border-border dark:shadow-[4px_0_36px_rgb(0_0_0_/0.55)] will-change-[width] ${
           sidebarCollapsed ? "w-[4.75rem] overflow-hidden" : "w-64 overflow-hidden lg:w-72"
         }`}
         aria-label="Dashboard navigation"
@@ -558,16 +574,16 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
       <div className={`relative flex min-h-0 min-w-0 flex-1 flex-col md:min-h-0 ${mainSurface}`}>
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35] md:opacity-50"
+          className="pointer-events-none absolute inset-0 opacity-[0.35] md:opacity-50 motion-safe:transition-opacity motion-safe:duration-500 motion-safe:ease-out dark:opacity-[0.5] md:dark:opacity-[0.6]"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='0.65' fill='%23111111' fill-opacity='0.04'/%3E%3C/svg%3E")`,
+            backgroundImage: dotPatternUrl,
             backgroundSize: "28px 28px",
           }}
           aria-hidden
         />
 
         <header
-          className={`relative z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-bg-primary/88 px-4 py-3 shadow-md shadow-black/[0.04] backdrop-blur-lg md:hidden ${DASH_TRANSITION}`}
+          className={`relative z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-bg-primary/88 px-4 py-3 shadow-md shadow-black/[0.04] backdrop-blur-lg md:hidden dark:border-border dark:bg-bg-secondary/98 dark:shadow-[0_8px_24px_rgb(0_0_0_/0.5)] ${DASH_TRANSITION}`}
           style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
         >
           <button

@@ -14,10 +14,10 @@ export function InsightsHub({ isAdmin }: { isAdmin: boolean }) {
     <div className="relative mt-10 min-w-0">
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-x-5 -top-8 bottom-[8%] -z-10 rounded-[26px] bg-[linear-gradient(155deg,rgb(255_255_255)_0%,rgba(232_242_234_0.55)_38%,transparent_72%,rgba(55_154_109_0.07)_100%)] shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.9)] ring-1 ring-border/35 sm:-inset-x-7"
+        className="pointer-events-none absolute -inset-x-5 -top-8 bottom-[8%] -z-10 rounded-[26px] bg-[linear-gradient(155deg,rgb(255_255_255)_0%,rgba(232_242_234_0.55)_38%,transparent_72%,rgba(55_154_109_0.07)_100%)] shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.9)] ring-1 ring-border/35 dark:bg-[linear-gradient(155deg,#262626_0%,rgb(33_33_33_/0.95)_42%,transparent_72%,rgb(23_23_23)_100%)] dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.03)] dark:ring-border sm:-inset-x-7"
       />
 
-      <div className="relative ml-px border-l-2 border-brand-primary/35 pl-4 sm:pl-5">
+      <div className="relative ml-px border-l-2 border-brand-primary/35 pl-4 dark:border-l-brand-primary/40 sm:pl-5">
         <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-brand-primary">
           Analytics hub
         </p>
@@ -35,7 +35,7 @@ export function InsightsHub({ isAdmin }: { isAdmin: boolean }) {
         </div>
 
         <div className={`min-w-0 xl:col-span-12 ${stripOuterSectionMargin}`}>
-          <div className="rounded-2xl border border-brand-primary/10 bg-linear-to-br from-white/90 to-bg-secondary/35 p-px shadow-[0_8px_32px_rgb(17_17_17_/0.06)]">
+          <div className="rounded-2xl border border-brand-primary/10 bg-linear-to-br from-white/90 to-bg-secondary/35 p-px shadow-[0_8px_32px_rgb(17_17_17_/0.06)] dark:border-border dark:bg-[linear-gradient(to_bottom_right,rgb(48_48_48_/0.95),rgb(33_33_33_/0.5))] dark:shadow-[0_8px_32px_rgb(0_0_0_/0.45)]">
             <div className="rounded-[15px] bg-bg-primary/80 px-1 py-1 sm:px-2 sm:py-2">
               <TargetsProgress />
             </div>
@@ -48,7 +48,7 @@ export function InsightsHub({ isAdmin }: { isAdmin: boolean }) {
 
         {isAdmin ? (
           <div className={`min-w-0 xl:col-span-12 ${stripOuterSectionMargin}`}>
-            <div className="rounded-2xl border border-info/20 bg-linear-to-br from-bg-primary via-white/90 to-[#eef6f9]/80 p-px shadow-[0_8px_28px_rgb(55_139_209_/0.08)]">
+            <div className="rounded-2xl border border-info/20 bg-linear-to-br from-bg-primary via-white/90 to-[#eef6f9]/80 p-px shadow-[0_8px_28px_rgb(55_139_209_/0.08)] dark:border-border dark:bg-[linear-gradient(to_bottom_right,#303030,#212121,#1a1a1a)] dark:shadow-[0_8px_28px_rgb(0_0_0_/0.48)]">
               <div className="rounded-[15px] bg-bg-primary/75 px-1 py-1 sm:px-2 sm:py-2">
                 <TeamBreakdown />
               </div>

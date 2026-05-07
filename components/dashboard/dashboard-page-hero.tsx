@@ -15,17 +15,17 @@ type DashboardPageHeroProps = {
  */
 export function DashboardPageHero({ eyebrow, title, description, breadcrumb }: DashboardPageHeroProps) {
   return (
-    <header className="relative overflow-hidden rounded-2xl border border-border/50 bg-bg-primary/90 px-5 py-6 shadow-[0_4px_36px_rgb(17_17_17_/0.07),0_0_0_1px_rgb(255_255_255_/0.8)_inset] backdrop-blur-sm sm:px-8 sm:py-8">
+    <header className="relative overflow-hidden rounded-2xl border border-border/50 bg-bg-primary/90 px-5 py-6 shadow-[0_4px_36px_rgb(17_17_17_/0.07),0_0_0_1px_rgb(255_255_255_/0.8)_inset] backdrop-blur-sm dark:border-border dark:shadow-[0_4px_36px_rgb(0_0_0_/0.45),inset_0_0_0_1px_rgb(255_255_255_/0.05)] sm:px-8 sm:py-8">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-linear-to-r from-brand-primary via-[#1aad4a] to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-linear-to-r from-brand-primary via-[#1aad4a] to-transparent dark:from-brand-primary dark:via-[#12b892] dark:to-transparent"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -right-20 -top-28 h-56 w-56 rounded-full bg-brand-primary/11 blur-3xl"
+        className="pointer-events-none absolute -right-20 -top-28 h-56 w-56 rounded-full bg-brand-primary/11 blur-3xl dark:bg-brand-primary/10"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-info/6 blur-3xl"
+        className="pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-info/6 blur-3xl dark:bg-[rgb(255_255_255_/0.04)]"
         aria-hidden
       />
 

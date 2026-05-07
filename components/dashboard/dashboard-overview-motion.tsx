@@ -113,7 +113,7 @@ export function OverviewAmbientBackdrop() {
   return (
     <motion.div
       aria-hidden
-      className="pointer-events-none absolute -inset-x-4 bottom-[-12px] top-2 -z-10 rounded-3xl bg-[linear-gradient(180deg,rgba(255_255_255_0.94)_0%,rgba(239_246_239_0.45)_52%,transparent_100%)] ring-1 ring-border/35 sm:-inset-x-6"
+      className="pointer-events-none absolute -inset-x-4 bottom-[-12px] top-2 -z-10 rounded-3xl bg-[linear-gradient(180deg,rgba(255_255_255_0.94)_0%,rgba(239_246_239_0.45)_52%,transparent_100%)] ring-1 ring-border/35 dark:bg-[linear-gradient(180deg,#262626_0%,rgb(33_33_33_/0.55)_55%,transparent_100%)] dark:ring-border sm:-inset-x-6"
       initial={reduce ? false : { opacity: 0.35, scale: 0.985 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.75, ease: easeOut, delay: reduce ? 0 : 0.12 }}
@@ -125,7 +125,7 @@ export function OverviewAccountCardMotion({ children }: { children: ReactNode })
   const reduce = useReducedMotion();
   return (
     <motion.div
-      className="rounded-2xl border border-border/60 bg-linear-to-br from-bg-primary via-white/92 to-[#eef3ef]/90 p-5 shadow-[0_12px_40px_rgb(17_17_17_/0.05)] lg:sticky lg:top-28"
+      className="rounded-2xl border border-border/60 bg-linear-to-br from-bg-primary via-white/92 to-[#eef3ef]/90 p-5 shadow-[0_12px_40px_rgb(17_17_17_/0.05)] dark:border-border dark:bg-[linear-gradient(to_bottom_right,#303030,#2a2a2a,#212121)] dark:shadow-[0_12px_40px_rgb(0_0_0_/0.45)] lg:sticky lg:top-28"
       whileHover={reduce ? undefined : { y: -2, boxShadow: "0 16px 48px rgb(17 17 17 / 0.08)" }}
       transition={{ duration: 0.22, ease: easeOut }}
     >

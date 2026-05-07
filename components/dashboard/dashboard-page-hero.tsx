@@ -1,11 +1,12 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 export type DashboardPageHeroBreadcrumb = { href?: string; label: string };
 
 type DashboardPageHeroProps = {
   eyebrow: string;
   title: string;
-  description?: string;
+  description?: ReactNode;
   breadcrumb?: DashboardPageHeroBreadcrumb[];
 };
 
@@ -62,7 +63,7 @@ export function DashboardPageHero({ eyebrow, title, description, breadcrumb }: D
           {title}
         </h1>
         {description ? (
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-text-secondary">{description}</p>
+          <div className="mt-3 max-w-2xl text-sm leading-relaxed text-text-secondary">{description}</div>
         ) : null}
       </div>
     </header>

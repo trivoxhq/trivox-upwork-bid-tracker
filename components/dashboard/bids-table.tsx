@@ -8,6 +8,7 @@ import {
   DASH_BTN_TABLE_DANGER,
   DASH_BTN_TOOLBAR,
   DASH_FILTER_BAR,
+  DASH_SECTION_GAP,
   DASH_SECTION_TITLE,
   DASH_TABLE_ROW,
   DASH_TABLE_TH,
@@ -45,7 +46,19 @@ function formatValue(n: number): string {
   }).format(n);
 }
 
-export function BidsTable({ bids, isAdmin }: { bids: BidTableRow[]; isAdmin: boolean }) {
+export function BidsTable({
+  bids,
+  isAdmin,
+  tableHeading = "Bids",
+  sectionGapClassName = DASH_SECTION_GAP,
+}: {
+  bids: BidTableRow[];
+  isAdmin: boolean;
+  /** Visible section title above the filters (e.g. “Bid log” on the dedicated bids page). */
+  tableHeading?: string;
+  /** Override outer section top spacing (default `mt-10`). Use `mt-0` on standalone bid log page. */
+  sectionGapClassName?: string;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<BidTableRow | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
@@ -128,9 +141,9 @@ export function BidsTable({ bids, isAdmin }: { bids: BidTableRow[]; isAdmin: boo
 
   return (
     <>
-      <section className="mt-10 w-full">
+      <section className={`${sectionGapClassName} w-full`}>
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <h2 className={DASH_SECTION_TITLE}>Bids</h2>
+          <h2 className={DASH_SECTION_TITLE}>{tableHeading}</h2>
           <p className="text-xs font-medium tracking-wide text-text-secondary">
             {filteredBids.length} / {bids.length} bids
           </p>

@@ -330,6 +330,8 @@ function SidebarScrollable({
   onNavigate?: () => void;
 }) {
   const overviewActive = pathname === "/dashboard";
+  const bidsActive = pathname.startsWith("/dashboard/bids");
+  const insightsActive = pathname.startsWith("/dashboard/insights");
   const usersActive = pathname.startsWith("/dashboard/users");
   const settingsActive = pathname.startsWith("/dashboard/settings");
   const [openSection, setOpenSection] = useState<"navigate" | "actions">("navigate");
@@ -338,7 +340,7 @@ function SidebarScrollable({
     <>
       <SidebarNavLink
         href="/dashboard"
-        active={overviewActive && !usersActive && !settingsActive}
+        active={overviewActive && !bidsActive && !insightsActive && !usersActive && !settingsActive}
         collapsed={collapsed}
         onNavigate={onNavigate}
         label="Overview"
@@ -349,8 +351,8 @@ function SidebarScrollable({
         }
       />
       <SidebarNavLink
-        href="/dashboard#section-bids"
-        active={false}
+        href="/dashboard/bids"
+        active={bidsActive}
         collapsed={collapsed}
         onNavigate={onNavigate}
         label="Bid log"
@@ -361,8 +363,8 @@ function SidebarScrollable({
         }
       />
       <SidebarNavLink
-        href="/dashboard#section-insights"
-        active={false}
+        href="/dashboard/insights"
+        active={insightsActive}
         collapsed={collapsed}
         onNavigate={onNavigate}
         label="Insights"
@@ -604,7 +606,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           role="main"
           className="relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[max(1rem,env(safe-area-inset-bottom))] md:pt-1"
         >
-          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">{children}</div>
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 md:px-8 md:py-2 lg:px-2">{children}</div>
         </div>
       </div>
 

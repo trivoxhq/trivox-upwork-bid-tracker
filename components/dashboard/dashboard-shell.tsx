@@ -253,7 +253,7 @@ function SidebarProfileHeader({
     "flex items-center justify-center rounded-md border border-border/60 bg-bg-secondary text-[11px] font-medium tabular-nums tracking-tight text-text-primary shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.65)]";
 
   return (
-    <div className="min-w-0 flex-1 rounded-xl border border-border/45 bg-white/45 px-2.5 py-2 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)]">
+    <div className="min-w-0 flex-1 rounded-xl  bg-white/45 px-2 py-1 shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.85)]">
       <div className="flex min-w-0 items-start gap-2">
         <Link
           href="/dashboard"

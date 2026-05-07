@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+  // Avoid Windows EPERM when replacing query_engine under node_modules/.prisma (OneDrive / locked dev).
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  member
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  name           String
+  role           Role
+  password       String
+  dailyTarget    Int      @default(0)
+  monthlyTarget  Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  bids           Bid[]
+
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  bids      Bid[]
+
+  @@index([isActive])
+  @@map("profiles")
+}
+
+model Niche {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  bids      Bid[]
+
+  @@index([isActive])
+  @@map("niches")
+}
+
+model Bid {
+  id        String   @id @default(uuid())
+  date      DateTime
+  profileId String
+  nicheId   String
+  client    String
+  bidLink   String?
+  status    String   @default("New")
+  value     Int      @default(0)
+  notes     String?
+  addedById String
+  addedBy   User     @relation(fields: [addedById], references: [id])
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  niche     Niche    @relation(fields: [nicheId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([addedById])
+  @@index([date])
+  @@index([status])
+  @@index([profileId])
+  @@index([nicheId])
+  @@map("bids")
+}

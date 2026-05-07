@@ -135,7 +135,9 @@ function SidebarNavLink({
           collapsed ? "justify-center px-0 py-2" : "gap-3 px-2.5 py-2.5"
         } ${
           active
-            ? "bg-gradient-to-r from-brand-primary/14 to-brand-primary/6 text-brand-primary shadow-[0_1px_2px_rgb(17_17_17_/0.04)]"
+            ? collapsed
+              ? "text-brand-primary"
+              : "bg-gradient-to-r from-brand-primary/14 to-brand-primary/6 text-brand-primary shadow-[0_1px_2px_rgb(17_17_17_/0.04)]"
             : "text-text-secondary hover:bg-white/90 hover:text-text-primary hover:shadow-sm"
         }`}
       >

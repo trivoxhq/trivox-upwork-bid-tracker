@@ -174,7 +174,7 @@ function SidebarQuickActions({
   embedInAccordion?: boolean;
 }) {
   const router = useRouter();
-  const btn = `${DASH_BTN_TOOLBAR} w-full justify-center text-[13px] shadow-sm`;
+  const btn = `${DASH_BTN_TOOLBAR} w-full justify-center text-[13px] shadow-md`;
 
   if (collapsed) {
     return (

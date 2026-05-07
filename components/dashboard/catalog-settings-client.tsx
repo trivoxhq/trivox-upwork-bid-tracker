@@ -163,7 +163,7 @@ function CatalogBlock({
               value={newName}
               onChange={(ev) => setNewName(ev.target.value)}
               disabled={adding}
-              className="w-full rounded-lg border border-border bg-bg-primary px-3 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+              className="w-full rounded-lg border border-input-border bg-bg-primary px-3 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
               placeholder={`Add ${kind === "profiles" ? "profile" : "niche"}…`}
             />
           </div>
@@ -200,7 +200,7 @@ function CatalogBlock({
                           value={editName}
                           onChange={(ev) => setEditName(ev.target.value)}
                           disabled={savingId === row.id}
-                          className="w-full min-w-[12rem] rounded-lg border border-border bg-bg-primary px-2 py-1.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                          className="w-full min-w-[12rem] rounded-lg border border-input-border bg-bg-primary px-2 py-1.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
                         />
                       ) : (
                         <span className="font-medium text-text-primary">{row.name}</span>

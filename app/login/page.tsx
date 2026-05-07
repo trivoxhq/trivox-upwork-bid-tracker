@@ -85,7 +85,7 @@ export default function LoginPage() {
     "w-full rounded-md border bg-bg-secondary py-2.5 pl-11 pr-4 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out placeholder:text-text-secondary/60 focus:border-brand-primary focus:ring-2 focus:ring-green-100 dark:bg-bg-primary dark:focus:ring-brand-primary/25 disabled:cursor-not-allowed disabled:opacity-60";
   const inputErrorClass = errorMessage
     ? "border-danger focus:border-danger focus:ring-red-100 dark:focus:ring-danger/30"
-    : "border-border";
+    : "border-input-border";
 
   return (
     <motion.main

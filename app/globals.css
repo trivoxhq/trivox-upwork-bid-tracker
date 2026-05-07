@@ -58,6 +58,11 @@
   inherits: true;
   initial-value: #378add;
 }
+@property --color-input-border {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #dddddd;
+}
 
 :root {
   --bg-main: #ffffff;
@@ -68,6 +73,7 @@
   --border-color: #dddddd;
   --accent-green: #108a00;
   --input-bg: #ffffff;
+  --input-border: var(--border-color);
   --code-bg: #f5f5f5;
 
   --color-text-primary: var(--text-primary);
@@ -76,6 +82,7 @@
   --color-bg-secondary: #f5f5f5;
   --color-bg-hover: var(--bg-hover);
   --color-border: var(--border-color);
+  --color-input-border: var(--input-border);
   --color-brand-primary: var(--accent-green);
   --color-brand-hover: #0e7a00;
   --color-danger: #d93025;
@@ -99,6 +106,7 @@ html.dark {
   --border-color: #333333;
   --accent-green: #10a37f;
   --input-bg: #303030;
+  --input-border: #ececec;
   --code-bg: #1e1e1e;
 
   /* Semantic tokens consumed by Tailwind @theme + components */
@@ -108,6 +116,7 @@ html.dark {
   --color-bg-primary: var(--input-bg);
   --color-bg-hover: var(--bg-hover);
   --color-border: var(--border-color);
+  --color-input-border: var(--input-border);
   --color-brand-primary: var(--accent-green);
   --color-brand-hover: #12b892;
   --color-danger: #f87171;
@@ -118,8 +127,8 @@ html.dark {
 @media (prefers-reduced-motion: no-preference) {
   html {
     transition-property: --color-bg-primary, --color-bg-secondary, --color-bg-hover, --color-text-primary,
-      --color-text-secondary, --color-border, --color-brand-primary, --color-brand-hover, --color-danger,
-      --color-warning, --color-info;
+      --color-text-secondary, --color-border, --color-input-border, --color-brand-primary, --color-brand-hover,
+      --color-danger, --color-warning, --color-info;
     transition-duration: 0.48s;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -133,6 +142,7 @@ html.dark {
   --color-bg-secondary: var(--color-bg-secondary);
   --color-bg-hover: var(--color-bg-hover);
   --color-border: var(--color-border);
+  --color-input-border: var(--color-input-border);
   --color-brand-primary: var(--color-brand-primary);
   --color-brand-hover: var(--color-brand-hover);
   --color-danger: var(--color-danger);
@@ -243,7 +253,7 @@ html.dark .ui-code {
 
 .ui-input {
   width: 100%;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--input-border);
   border-radius: 0.375rem;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);

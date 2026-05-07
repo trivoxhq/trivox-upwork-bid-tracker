@@ -35,7 +35,7 @@ export default function DesignSystemDemo() {
             Search Project
           </label>
           <input
-            className="w-full rounded-md border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-shadow duration-200 ease-out focus:ring-2 focus:ring-brand-primary/30"
+            className="w-full rounded-md border border-input-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-shadow duration-200 ease-out focus:ring-2 focus:ring-brand-primary/30"
             placeholder="Type to search..."
           />
         </div>

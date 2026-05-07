@@ -17,12 +17,12 @@ type EditBidModalProps = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-border bg-bg-primary px-3 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-text-secondary/55 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:opacity-70";
+  "w-full rounded-lg border border-input-border bg-bg-primary px-3 py-2.5 text-sm text-text-primary shadow-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-text-secondary/55 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:opacity-70";
 
 const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary";
 
 const readOnlyFieldClass =
-  "w-full cursor-default rounded-lg border border-border bg-bg-secondary/90 px-3 py-2.5 text-sm text-text-primary shadow-inner outline-none";
+  "w-full cursor-default rounded-lg border border-input-border bg-bg-secondary/90 px-3 py-2.5 text-sm text-text-primary shadow-inner outline-none";
 
 function formatBidDateDisplay(iso: string): string {
   const d = new Date(iso);

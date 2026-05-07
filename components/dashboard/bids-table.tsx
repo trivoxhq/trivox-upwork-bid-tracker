@@ -217,7 +217,7 @@ export function BidsTable({
                 <select
                   value={profileFilter}
                   onChange={(e) => setProfileFilter(e.target.value)}
-                  className="min-h-[44px] rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
+                  className="min-h-[44px] rounded-lg border border-input-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
                 >
                   <option value="">All profiles</option>
                   {profileOptions.map((opt) => (
@@ -229,7 +229,7 @@ export function BidsTable({
                 <select
                   value={nicheFilter}
                   onChange={(e) => setNicheFilter(e.target.value)}
-                  className="min-h-[44px] rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
+                  className="min-h-[44px] rounded-lg border border-input-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
                 >
                   <option value="">All niches</option>
                   {nicheOptions.map((opt) => (
@@ -242,13 +242,13 @@ export function BidsTable({
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="min-h-[44px] rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
+                  className="min-h-[44px] rounded-lg border border-input-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
                 />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="min-h-[44px] rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
+                  className="min-h-[44px] rounded-lg border border-input-border bg-bg-primary px-3 py-2 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 ease-out focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 sm:min-h-0"
                 />
                 <button
                   type="button"

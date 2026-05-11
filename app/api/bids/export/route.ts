@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { buildBidsXlsxBuffer } from "@/lib/bids/build-bids-xlsx";
+import { BID_EXPORT_HEADERS, buildBidExportRows } from "@/lib/bids/export-bids-rows";
 import { prisma } from "@/lib/prisma";
 
 function csvEscape(value: string): string {
@@ -9,8 +11,10 @@ function csvEscape(value: string): string {
   return value;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const format = new URL(request.url).searchParams.get("format")?.toLowerCase() ?? "csv";
+
     const session = await getCurrentUser();
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -40,24 +44,28 @@ export async function GET() {
       },
     });
 
-    const headers = ["date", "profile", "client", "niche", "status", "value", "notes"];
-    const lines = [headers.join(",")];
+    const headers = [...BID_EXPORT_HEADERS];
+    const rows = buildBidExportRows(bids);
+    const stamp = new Date().toISOString().slice(0, 10);
 
-    for (const bid of bids) {
-      const row = [
-        bid.date.toISOString().slice(0, 10),
-        bid.profile.name,
-        bid.client,
-        bid.niche.name,
-        bid.status,
-        String(bid.value),
-        bid.notes ?? "",
-      ].map(csvEscape);
-      lines.push(row.join(","));
+    if (format === "xlsx") {
+      const buffer = buildBidsXlsxBuffer(headers, rows);
+      const filename = `bids-export-${stamp}.xlsx`;
+      return new NextResponse(new Uint8Array(buffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      });
     }
 
+    const lines = [headers.join(",")];
+    for (const row of rows) {
+      lines.push(row.map(csvEscape).join(","));
+    }
     const csv = lines.join("\n");
-    const stamp = new Date().toISOString().slice(0, 10);
     const filename = `bids-export-${stamp}.csv`;
 
     return new NextResponse(csv, {

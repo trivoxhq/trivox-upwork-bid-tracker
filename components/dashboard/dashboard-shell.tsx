@@ -13,7 +13,7 @@ import {
   DASH_TRANSITION,
 } from "@/components/dashboard/dashboard-classes";
 import { DashboardAddBidTrigger } from "@/components/dashboard/dashboard-add-bid-trigger";
-import { DashboardExportCsvButton } from "@/components/dashboard/dashboard-export-csv-button";
+import { DashboardExportBidsButton } from "@/components/dashboard/dashboard-export-csv-button";
 import { DashboardResetBidsButton } from "@/components/dashboard/dashboard-reset-bids-button";
 import { DashboardLogoutButton } from "@/components/dashboard/logout-button";
 import { ThemeCycleButton } from "@/components/theme/theme-cycle-button";
@@ -200,7 +200,8 @@ function SidebarQuickActions({
             <path d="M21 3v7h-7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </motion.button>
-        <DashboardExportCsvButton iconOnly />
+        <DashboardExportBidsButton format="xlsx" iconOnly />
+        <DashboardExportBidsButton format="csv" iconOnly />
         <DashboardAddBidTrigger iconOnly label="Add bid" />
         {isAdmin ? (
           <DashboardResetBidsButton iconOnly triggerClassName={`${DASH_BTN_DANGER_GHOST} border-danger/40 p-0`} />
@@ -221,7 +222,8 @@ function SidebarQuickActions({
       >
         Refresh data
       </button>
-      <DashboardExportCsvButton buttonClassName={btn} />
+      <DashboardExportBidsButton format="xlsx" buttonClassName={btn} />
+      <DashboardExportBidsButton format="csv" buttonClassName={btn} />
       <DashboardAddBidTrigger label="Add bid" className="min-h-[44px] w-full text-[13px] shadow-md shadow-brand-primary/15" />
       {isAdmin ? (
         <DashboardResetBidsButton triggerClassName={`${DASH_BTN_DANGER_GHOST} w-full justify-center text-[13px]`} />
@@ -432,7 +434,7 @@ function SidebarScrollable({
             {navLinks}
           </nav>
         </div>
-        <div className="mt-6 flex min-h-0 flex-col items-center">
+        <div className="mt-4 flex min-h-0 flex-col items-center">
           <span className="mb-2 h-1 w-1 rounded-full bg-info/40" aria-hidden />
           <div className="mt-1 w-full">
             <SidebarQuickActions isAdmin={user.isAdmin} collapsed onDone={onNavigate} />

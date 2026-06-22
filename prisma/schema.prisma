@@ -25,6 +25,8 @@ model User {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   bids           Bid[]
+  leadsCreated   Lead[]   @relation("LeadCreatedBy")
+  leadsAssigned  Lead[]   @relation("LeadAssignedTo")
 
   @@map("users")
 }
@@ -74,4 +76,30 @@ model Bid {
   @@index([profileId])
   @@index([nicheId])
   @@map("bids")
+}
+
+model Lead {
+  id           String   @id @default(uuid())
+  title        String
+  clientName   String
+  email        String?
+  phone        String?
+  company      String?
+  country      String?
+  source       String?
+  status       String   @default("New")
+  notes        String?  @db.Text
+  assignedToId String?
+  assignedTo   User?    @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  createdById  String
+  createdBy    User     @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@map("leads")
 }

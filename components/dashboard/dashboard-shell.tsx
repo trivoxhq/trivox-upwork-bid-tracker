@@ -342,6 +342,7 @@ function SidebarScrollable({
 }) {
   const overviewActive = pathname === "/dashboard";
   const bidsActive = pathname.startsWith("/dashboard/bids");
+  const leadsActive = pathname.startsWith("/dashboard/leads");
   const insightsActive = pathname.startsWith("/dashboard/insights");
   const usersActive = pathname.startsWith("/dashboard/users");
   const settingsActive = pathname.startsWith("/dashboard/settings");
@@ -351,7 +352,9 @@ function SidebarScrollable({
     <>
       <SidebarNavLink
         href="/dashboard"
-        active={overviewActive && !bidsActive && !insightsActive && !usersActive && !settingsActive}
+        active={
+          overviewActive && !bidsActive && !leadsActive && !insightsActive && !usersActive && !settingsActive
+        }
         collapsed={collapsed}
         onNavigate={onNavigate}
         label="Overview"
@@ -370,6 +373,19 @@ function SidebarScrollable({
         icon={
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" strokeLinecap="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/leads"
+        active={leadsActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Leads"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M4 5h16M4 12h10M4 19h7" strokeLinecap="round" />
+            <path d="M17 14l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         }
       />

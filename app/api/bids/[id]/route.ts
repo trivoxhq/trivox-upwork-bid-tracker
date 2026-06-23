@@ -4,8 +4,6 @@ import { BID_STATUS_LABELS, isValidBidStatus } from "@/lib/bids/catalog";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
-const MEMBER_ALLOWED_KEYS = new Set(["status", "notes"]);
-
 const ADMIN_UPDATABLE_KEYS = new Set([
   "date",
   "profileId",
@@ -47,33 +45,6 @@ function parseStatus(value: unknown, errors: Record<string, string>): string | u
     return undefined;
   }
   return t;
-}
-
-function buildMemberUpdate(
-  body: Record<string, unknown>,
-): { data: Prisma.BidUpdateInput } | { response: NextResponse } {
-  const errors: Record<string, string> = {};
-  const data: Prisma.BidUpdateInput = {};
-
-  if ("status" in body) {
-    const s = parseStatus(body.status, errors);
-    if (s !== undefined && !errors.status) data.status = s;
-  }
-
-  if ("notes" in body) {
-    const n = parseNotesField(body.notes, errors);
-    if (n !== undefined && !errors.notes) data.notes = n;
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { response: jsonError(400, "Validation failed.", errors) };
-  }
-
-  if (Object.keys(data).length === 0) {
-    return { response: jsonError(400, "No updates provided.") };
-  }
-
-  return { data };
 }
 
 async function buildAdminUpdate(
@@ -223,15 +194,15 @@ export async function PUT(
 
     const bid = await prisma.bid.findUnique({
       where: { id },
-      select: { id: true, addedById: true },
+      select: { id: true },
     });
 
     if (!bid) {
       return jsonError(404, "Bid not found.");
     }
 
-    if (actor.role !== "admin" && bid.addedById !== actor.id) {
-      return jsonError(403, "You do not have access to this bid.");
+    if (actor.role !== "admin") {
+      return jsonError(403, "Only administrators can edit bids.");
     }
 
     let body: Record<string, unknown>;
@@ -246,31 +217,6 @@ export async function PUT(
     }
 
     const bodyKeys = Object.keys(body);
-
-    if (actor.role !== "admin") {
-      const forbidden = bodyKeys.filter((k) => !MEMBER_ALLOWED_KEYS.has(k));
-      if (forbidden.length > 0) {
-        return jsonError(
-          403,
-          "You may only update status and notes. Remove other fields from the request.",
-        );
-      }
-
-      const built = buildMemberUpdate(body);
-      if ("response" in built) return built.response;
-
-      const updated = await prisma.bid.update({
-        where: { id },
-        data: built.data,
-        include: {
-          addedBy: { select: { name: true } },
-          profile: { select: { id: true, name: true, isActive: true } },
-          niche: { select: { id: true, name: true, isActive: true } },
-        },
-      });
-
-      return NextResponse.json({ success: true, bid: updated });
-    }
 
     const unknownAdminKeys = bodyKeys.filter((k) => !ADMIN_UPDATABLE_KEYS.has(k));
     if (unknownAdminKeys.length > 0) {

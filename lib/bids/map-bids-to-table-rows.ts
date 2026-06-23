@@ -20,5 +20,6 @@ export function mapBidsToTableRows(
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
     addedBy: { name: b.addedBy.name },
+    memberEditLocked: b.memberEditLocked,
   }));
 }

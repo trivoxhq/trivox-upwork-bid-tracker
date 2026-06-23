@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function listBidsForActor(actor: { id: string; role: Role }) {
   const where = actor.role === "admin" ? {} : { addedById: actor.id };
 
-  return prisma.bid.findMany({
+  const bids = await prisma.bid.findMany({
     where,
     orderBy: { createdAt: "desc" },
     include: {
@@ -19,4 +19,9 @@ export async function listBidsForActor(actor: { id: string; role: Role }) {
       },
     },
   });
+
+  return bids.map((bid) => ({
+    ...bid,
+    memberEditLocked: actor.role !== "admin",
+  }));
 }

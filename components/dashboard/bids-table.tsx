@@ -331,13 +331,24 @@ export function BidsTable({
                         </td>
                         <td className="max-w-40 px-4 py-3 text-right sm:max-w-none">
                           <div className="flex flex-col gap-2 sm:inline-flex sm:max-w-none sm:flex-row sm:flex-wrap sm:justify-end">
-                            <button
-                              type="button"
-                              onClick={() => setEditing(bid)}
-                              className={DASH_BTN_TABLE}
-                            >
-                              Edit
-                            </button>
+                            {bid.memberEditLocked && !isAdmin ? (
+                              <button
+                                type="button"
+                                disabled
+                                title="Members can add bids only. Ask an admin to edit this bid."
+                                className={DASH_BTN_TABLE}
+                              >
+                                Admin only
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setEditing(bid)}
+                                className={DASH_BTN_TABLE}
+                              >
+                                Edit
+                              </button>
+                            )}
                             {isAdmin ? (
                               <button
                                 type="button"

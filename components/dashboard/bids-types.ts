@@ -15,4 +15,6 @@ export type BidTableRow = {
   createdAt: string;
   updatedAt: string;
   addedBy: { name: string };
+  /** Members can add bids only; admins can edit existing bids. */
+  memberEditLocked: boolean;
 };

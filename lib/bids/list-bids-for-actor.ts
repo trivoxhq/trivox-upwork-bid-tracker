@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { Role } from "@/generated/prisma-client";
 import { prisma } from "@/lib/prisma";
 
 export async function listBidsForActor(actor: { id: string; role: Role }) {

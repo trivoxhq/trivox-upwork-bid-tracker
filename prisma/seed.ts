@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma-client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_NICHE_IDS, DEFAULT_PROFILE_IDS } from "../lib/catalog/default-ids";
 

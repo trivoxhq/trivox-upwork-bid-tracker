@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { BID_STATUS_LABELS, isValidBidStatus } from "@/lib/bids/catalog";
 import { getCurrentUser } from "@/lib/auth/session";

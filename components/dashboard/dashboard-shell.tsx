@@ -343,6 +343,9 @@ function SidebarScrollable({
   const overviewActive = pathname === "/dashboard";
   const bidsActive = pathname.startsWith("/dashboard/bids");
   const leadsActive = pathname.startsWith("/dashboard/leads");
+  const clientsActive = pathname.startsWith("/dashboard/clients");
+  const tasksActive = pathname.startsWith("/dashboard/tasks");
+  const calendarActive = pathname.startsWith("/dashboard/calendar");
   const insightsActive = pathname.startsWith("/dashboard/insights");
   const usersActive = pathname.startsWith("/dashboard/users");
   const settingsActive = pathname.startsWith("/dashboard/settings");
@@ -353,7 +356,15 @@ function SidebarScrollable({
       <SidebarNavLink
         href="/dashboard"
         active={
-          overviewActive && !bidsActive && !leadsActive && !insightsActive && !usersActive && !settingsActive
+          overviewActive &&
+          !bidsActive &&
+          !leadsActive &&
+          !clientsActive &&
+          !tasksActive &&
+          !calendarActive &&
+          !insightsActive &&
+          !usersActive &&
+          !settingsActive
         }
         collapsed={collapsed}
         onNavigate={onNavigate}
@@ -386,6 +397,46 @@ function SidebarScrollable({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M4 5h16M4 12h10M4 19h7" strokeLinecap="round" />
             <path d="M17 14l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/clients"
+        active={clientsActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Clients"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M4 20V6a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" strokeLinejoin="round" />
+            <path d="M14 4v6h6M8 14h8M8 18h5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/tasks"
+        active={tasksActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Tasks"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M9 11l2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 6h3M5 12h3M5 18h3M12 18h7" strokeLinecap="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/calendar"
+        active={calendarActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Calendar"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M7 3v4M17 3v4M4 9h16" strokeLinecap="round" />
+            <path d="M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" strokeLinejoin="round" />
+            <path d="M8 13h3v3H8z" strokeLinejoin="round" />
           </svg>
         }
       />
@@ -485,7 +536,7 @@ function SidebarScrollable({
             id="sidebar-panel-navigate"
             role="region"
             aria-labelledby="sidebar-trigger-navigate"
-            className={`${navClass} border-t border-border/35 px-1.5 pb-1.5 pt-1`}
+            className={`sidebar-scroll ${navClass} max-h-[min(58vh,34rem)] scroll-pb-10 overflow-y-auto overscroll-y-contain border-t border-border/35 px-1.5 pb-10 pt-1 pr-2`}
             aria-label="Dashboard sections"
           >
             {navLinks}

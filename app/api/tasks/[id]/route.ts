@@ -1,20 +1,16 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
-import { isValidLeadStatus } from "@/lib/leads/catalog";
-import { LEAD_INCLUDE_USERS, mapLeadToRow } from "@/lib/leads/map-lead";
+import { isValidTaskPriority, isValidTaskStatus } from "@/lib/tasks/catalog";
+import { TASK_INCLUDE_USERS, mapTaskToRow } from "@/lib/tasks/map-task";
 import { prisma } from "@/lib/prisma";
 
 const UPDATABLE_KEYS = new Set([
   "title",
-  "clientName",
-  "email",
-  "phone",
-  "company",
-  "country",
-  "source",
+  "description",
   "status",
-  "notes",
+  "priority",
+  "dueAt",
   "assignedToId",
 ]);
 
@@ -31,7 +27,7 @@ async function getActiveActor() {
 
   return prisma.user.findUnique({
     where: { id: session.sub },
-    select: { id: true, role: true, isActive: true },
+    select: { id: true, isActive: true, role: true },
   });
 }
 
@@ -63,28 +59,43 @@ function requiredUpdateString(
   return value.trim();
 }
 
+function parseDueAt(value: unknown, errors: Record<string, string>) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string") {
+    errors.dueAt = "dueAt must be a date string or null.";
+    return undefined;
+  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    errors.dueAt = "dueAt must be a valid date.";
+    return undefined;
+  }
+  return d;
+}
+
 export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await context.params;
-    if (!id?.trim()) return jsonError(400, "Lead id is required.");
+    if (!id?.trim()) return jsonError(400, "Task id is required.");
 
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
 
-    const existing = await prisma.lead.findUnique({
+    const existing = await prisma.crmTask.findUnique({
       where: { id },
       select: { id: true, assignedToId: true, createdById: true },
     });
-    if (!existing) return jsonError(404, "Lead not found.");
+    if (!existing) return jsonError(404, "Task not found.");
 
     const canAccess =
       actor.role === "admin" ||
       existing.assignedToId === actor.id ||
       existing.createdById === actor.id;
-    if (!canAccess) return jsonError(403, "You do not have access to this lead.");
+    if (!canAccess) return jsonError(403, "You do not have access to this task.");
 
     let body: Record<string, unknown>;
     try {
@@ -102,33 +113,43 @@ export async function PUT(
     }
 
     const errors: Record<string, string> = {};
-    const data: Prisma.LeadUpdateInput = {};
+    const data: Prisma.CrmTaskUpdateInput = {};
 
     const title = requiredUpdateString(body.title, "title", errors);
     if (title !== undefined && !errors.title) data.title = title;
 
-    const clientName = requiredUpdateString(body.clientName, "clientName", errors);
-    if (clientName !== undefined && !errors.clientName) data.clientName = clientName;
-
-    for (const field of ["email", "phone", "company", "country", "source", "notes"] as const) {
-      if (field in body) {
-        const value = optionalNullableString(body[field], field, errors);
-        if (value !== undefined && !errors[field]) data[field] = value;
-      }
+    if ("description" in body) {
+      const description = optionalNullableString(body.description, "description", errors);
+      if (description !== undefined && !errors.description) data.description = description;
     }
 
     if ("status" in body) {
       const status = requiredUpdateString(body.status, "status", errors);
-      if (status && !isValidLeadStatus(status)) {
-        errors.status = "status must be one of the configured pipeline stages.";
+      if (status && !isValidTaskStatus(status)) {
+        errors.status = "status must be a configured task status.";
       } else if (status && !errors.status) {
         data.status = status;
+        data.completedAt = status === "Done" ? new Date() : null;
       }
+    }
+
+    if ("priority" in body) {
+      const priority = requiredUpdateString(body.priority, "priority", errors);
+      if (priority && !isValidTaskPriority(priority)) {
+        errors.priority = "priority must be a configured task priority.";
+      } else if (priority && !errors.priority) {
+        data.priority = priority;
+      }
+    }
+
+    if ("dueAt" in body) {
+      const dueAt = parseDueAt(body.dueAt, errors);
+      if (dueAt !== undefined && !errors.dueAt) data.dueAt = dueAt;
     }
 
     if ("assignedToId" in body) {
       if (actor.role !== "admin") {
-        errors.assignedToId = "Only administrators can reassign leads.";
+        errors.assignedToId = "Only administrators can reassign tasks.";
       } else {
         const assignedToId = optionalNullableString(body.assignedToId, "assignedToId", errors);
         if (assignedToId === null) {
@@ -139,7 +160,7 @@ export async function PUT(
             select: { id: true },
           });
           if (!assignee) {
-            errors.assignedToId = "Choose an active team member.";
+            errors.assignedToId = "Choose an active assignee.";
           } else {
             data.assignedTo = { connect: { id: assignedToId } };
           }
@@ -150,16 +171,16 @@ export async function PUT(
     if (Object.keys(errors).length > 0) return jsonError(400, "Validation failed.", errors);
     if (Object.keys(data).length === 0) return jsonError(400, "No updates provided.");
 
-    const lead = await prisma.lead.update({
+    const task = await prisma.crmTask.update({
       where: { id },
       data,
-      include: LEAD_INCLUDE_USERS,
+      include: TASK_INCLUDE_USERS,
     });
 
-    return NextResponse.json({ success: true, lead: mapLeadToRow(lead) });
+    return NextResponse.json({ success: true, task: mapTaskToRow(task) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return jsonError(404, "Lead not found.");
+      return jsonError(404, "Task not found.");
     }
     return jsonError(500, "Something went wrong. Please try again.");
   }
@@ -171,17 +192,17 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
-    if (!id?.trim()) return jsonError(400, "Lead id is required.");
+    if (!id?.trim()) return jsonError(400, "Task id is required.");
 
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
-    if (actor.role !== "admin") return jsonError(403, "Only administrators can delete leads.");
+    if (actor.role !== "admin") return jsonError(403, "Only administrators can delete tasks.");
 
-    await prisma.lead.delete({ where: { id } });
+    await prisma.crmTask.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return jsonError(404, "Lead not found.");
+      return jsonError(404, "Task not found.");
     }
     return jsonError(500, "Something went wrong. Please try again.");
   }

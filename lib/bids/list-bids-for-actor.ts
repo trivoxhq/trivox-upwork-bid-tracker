@@ -18,6 +18,9 @@ export async function listBidsForActor(actor: { id: string; role: Role }) {
       niche: {
         select: { id: true, name: true, isActive: true },
       },
+      deal: {
+        select: { id: true, title: true },
+      },
     },
   });
 

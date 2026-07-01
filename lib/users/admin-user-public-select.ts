@@ -5,6 +5,7 @@ export const ADMIN_USER_PUBLIC_SELECT = {
   name: true,
   role: true,
   dailyTarget: true,
+  weeklyTarget: true,
   monthlyTarget: true,
   isActive: true,
   createdAt: true,

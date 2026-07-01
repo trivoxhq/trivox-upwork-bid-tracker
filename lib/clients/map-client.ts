@@ -20,6 +20,7 @@ type ClientWithHistory = {
   company: string | null;
   country: string | null;
   source: string | null;
+  isRecurring: boolean;
   notes: string | null;
   createdBy: UserSummary;
   history: ClientHistoryWithUser[];

@@ -3,6 +3,11 @@ export type LostBySourceRow = {
   count: number;
 };
 
+export type LostByReasonRow = {
+  reason: string;
+  count: number;
+};
+
 export type CrmReportsPayload = {
   leads: {
     total: number;
@@ -27,6 +32,7 @@ export type CrmReportsPayload = {
     dealsWon: number;
     bidsWon: number;
     total: number;
+    linkedBidsExcluded: number;
   };
   winRate: {
     leads: number;
@@ -37,5 +43,6 @@ export type CrmReportsPayload = {
     leadsLost: number;
     dealsClosedLost: number;
     leadsLostBySource: LostBySourceRow[];
+    lostByReason: LostByReasonRow[];
   };
 };

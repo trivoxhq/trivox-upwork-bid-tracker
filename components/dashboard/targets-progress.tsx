@@ -17,11 +17,14 @@ type TargetRow = {
   userId: string;
   name: string;
   dailyTarget: number;
+  weeklyTarget: number;
   monthlyTarget: number;
   todayWon: number;
+  weekWon: number;
   monthWon: number;
   monthLost: number;
   monthRemaining: number;
+  weekRemaining: number;
   dailyStatus: "good" | "warn" | "bad";
 };
 
@@ -43,11 +46,14 @@ function isTargetsPayload(json: unknown): json is TargetRow[] {
       typeof (row as TargetRow).userId === "string" &&
       typeof (row as TargetRow).name === "string" &&
       typeof (row as TargetRow).dailyTarget === "number" &&
+      typeof (row as TargetRow).weeklyTarget === "number" &&
       typeof (row as TargetRow).monthlyTarget === "number" &&
       typeof (row as TargetRow).todayWon === "number" &&
+      typeof (row as TargetRow).weekWon === "number" &&
       typeof (row as TargetRow).monthWon === "number" &&
       typeof (row as TargetRow).monthLost === "number" &&
       typeof (row as TargetRow).monthRemaining === "number" &&
+      typeof (row as TargetRow).weekRemaining === "number" &&
       ((row as TargetRow).dailyStatus === "good" ||
         (row as TargetRow).dailyStatus === "warn" ||
         (row as TargetRow).dailyStatus === "bad"),
@@ -175,6 +181,15 @@ function UserTargetCard({ row, index }: { row: TargetRow; index: number }) {
       <p className={`mt-6 text-lg font-bold tabular-nums sm:text-xl ${dailyClass}`}>
         Today: {formatUsd(row.todayWon)} / {formatUsd(row.dailyTarget)}
       </p>
+
+      {row.weeklyTarget > 0 ? (
+        <p className="mt-2 text-sm font-semibold tabular-nums text-text-secondary">
+          This week: {formatUsd(row.weekWon)} / {formatUsd(row.weeklyTarget)}
+          <span className="ml-2 text-text-secondary/80">
+            ({formatUsd(row.weekRemaining)} remaining)
+          </span>
+        </p>
+      ) : null}
     </motion.article>
   );
 }
@@ -256,7 +271,9 @@ export function TargetsProgress() {
       );
     }
 
-    const hasAnyTarget = rows.some((row) => row.dailyTarget > 0 || row.monthlyTarget > 0);
+    const hasAnyTarget = rows.some(
+      (row) => row.dailyTarget > 0 || row.weeklyTarget > 0 || row.monthlyTarget > 0,
+    );
     if (!hasAnyTarget) {
       return <EmptyState title="No targets set yet" />;
     }

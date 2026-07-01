@@ -33,6 +33,7 @@ function isAdminUserRow(value: unknown): value is AdminUserRow {
     typeof o.role === "string" &&
     isValidRole(o.role) &&
     typeof o.dailyTarget === "number" &&
+    typeof o.weeklyTarget === "number" &&
     typeof o.monthlyTarget === "number" &&
     typeof o.isActive === "boolean" &&
     typeof o.createdAt === "string"
@@ -54,6 +55,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
 
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
   const [dailyStr, setDailyStr] = useState("");
+  const [weeklyStr, setWeeklyStr] = useState("");
   const [monthlyStr, setMonthlyStr] = useState("");
   const [modalError, setModalError] = useState<string | null>(null);
   const [savingTargets, setSavingTargets] = useState(false);
@@ -116,6 +118,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
   function openEdit(user: AdminUserRow) {
     setEditing(user);
     setDailyStr(String(user.dailyTarget));
+    setWeeklyStr(String(user.weeklyTarget));
     setMonthlyStr(String(user.monthlyTarget));
     setModalError(null);
   }
@@ -260,9 +263,14 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
     setModalError(null);
 
     const daily = Number.parseInt(dailyStr, 10);
+    const weekly = Number.parseInt(weeklyStr, 10);
     const monthly = Number.parseInt(monthlyStr, 10);
     if (!Number.isFinite(daily) || !Number.isInteger(daily) || daily < 0) {
       setModalError("Daily target must be a whole number ≥ 0.");
+      return;
+    }
+    if (!Number.isFinite(weekly) || !Number.isInteger(weekly) || weekly < 0) {
+      setModalError("Weekly target must be a whole number ≥ 0.");
       return;
     }
     if (!Number.isFinite(monthly) || !Number.isInteger(monthly) || monthly < 0) {
@@ -276,7 +284,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dailyTarget: daily, monthlyTarget: monthly }),
+        body: JSON.stringify({ dailyTarget: daily, weeklyTarget: weekly, monthlyTarget: monthly }),
       });
 
       const data = (await res.json().catch(() => null)) as {
@@ -500,6 +508,8 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                 <td className="whitespace-nowrap px-4 py-3 tabular-nums text-text-primary">
                   <span className="text-text-secondary">D</span> {formatMoney(user.dailyTarget)}
                   <span className="mx-1.5 text-border">·</span>
+                  <span className="text-text-secondary">W</span> {formatMoney(user.weeklyTarget)}
+                  <span className="mx-1.5 text-border">·</span>
                   <span className="text-text-secondary">M</span> {formatMoney(user.monthlyTarget)}
                 </td>
                 <td className="px-4 py-3">
@@ -597,6 +607,22 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                     className={inputClass}
                     value={dailyStr}
                     onChange={(e) => setDailyStr(e.target.value)}
+                    disabled={savingTargets}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="edit-weekly-target">
+                    Weekly target
+                  </label>
+                  <input
+                    id="edit-weekly-target"
+                    type="number"
+                    min={0}
+                    step={1}
+                    required
+                    className={inputClass}
+                    value={weeklyStr}
+                    onChange={(e) => setWeeklyStr(e.target.value)}
                     disabled={savingTargets}
                   />
                 </div>

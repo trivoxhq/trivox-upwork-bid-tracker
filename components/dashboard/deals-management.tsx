@@ -15,6 +15,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { CrmImportExportToolbar } from "@/components/dashboard/crm-import-export-toolbar";
 import { CrmNotesPanel } from "@/components/dashboard/crm-notes-panel";
+import { LostReasonSelect } from "@/components/dashboard/lost-reason-select";
 import {
   CrmAdvancedFiltersPanel,
   CrmFilterCheckbox,
@@ -38,6 +39,7 @@ type DealFormState = {
   clientName: string;
   value: string;
   stage: string;
+  lostReason: string;
   probability: string;
   expectedCloseAt: string;
   notes: string;
@@ -58,6 +60,7 @@ const emptyForm: DealFormState = {
   clientName: "",
   value: "0",
   stage: "Qualification",
+  lostReason: "",
   probability: "0",
   expectedCloseAt: "",
   notes: "",
@@ -98,6 +101,7 @@ function dealToForm(deal: DealRow): DealFormState {
     clientName: deal.clientName,
     value: String(deal.value),
     stage: deal.stage,
+    lostReason: deal.lostReason ?? "",
     probability: String(deal.probability),
     expectedCloseAt: toDateInputValue(deal.expectedCloseAt),
     notes: deal.notes ?? "",
@@ -121,6 +125,9 @@ function compactPayload(form: DealFormState, isAdmin: boolean) {
   if (isAdmin) {
     payload.ownerId = form.ownerId || null;
   }
+
+  payload.lostReason =
+    form.stage === "Closed Lost" && form.lostReason.trim() ? form.lostReason.trim() : null;
 
   return payload;
 }
@@ -180,6 +187,11 @@ function DealsManagementInner({
   const valueMin = filters.getString("valueMin");
   const valueMax = filters.getString("valueMax");
   const openOnly = filters.getBool("openOnly");
+
+  const showLostReasonColumn = useMemo(
+    () => initialDeals.some((deal) => deal.lostReason),
+    [initialDeals],
+  );
 
   const filteredDeals = useMemo(() => {
     return initialDeals.filter((deal) => {
@@ -412,6 +424,19 @@ function DealsManagementInner({
             </div>
           </div>
 
+          {form.stage === "Closed Lost" ? (
+            <div>
+              <label className={labelClass} htmlFor="deal-lost-reason">
+                Lost reason
+              </label>
+              <LostReasonSelect
+                value={form.lostReason}
+                onChange={(value) => setField("lostReason", value)}
+                className={inputClass}
+              />
+            </div>
+          ) : null}
+
           {isAdmin ? (
             <div>
               <label className={labelClass} htmlFor="deal-owner">
@@ -565,6 +590,7 @@ function DealsManagementInner({
                   <th className={DASH_TABLE_TH}>Client</th>
                   <th className={DASH_TABLE_TH}>Value</th>
                   <th className={DASH_TABLE_TH}>Stage</th>
+                  {showLostReasonColumn ? <th className={DASH_TABLE_TH}>Lost reason</th> : null}
                   <th className={DASH_TABLE_TH}>Probability</th>
                   <th className={DASH_TABLE_TH}>Close date</th>
                   <th className={DASH_TABLE_TH}>Owner</th>
@@ -582,6 +608,9 @@ function DealsManagementInner({
                     <td className="px-3 py-3">
                       <DealStagePill stage={deal.stage} />
                     </td>
+                    {showLostReasonColumn ? (
+                      <td className="px-3 py-3 text-text-secondary">{deal.lostReason ?? "—"}</td>
+                    ) : null}
                     <td className="px-3 py-3 tabular-nums text-text-secondary">
                       {deal.probability}%
                     </td>

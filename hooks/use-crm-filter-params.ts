@@ -100,6 +100,23 @@ export function useCrmFilterParams({ stringKeys, boolKeys = [] }: FilterConfig) 
   const getString = useCallback((key: string) => strings[key] ?? "", [strings]);
   const getBool = useCallback((key: string) => bools[key] ?? false, [bools]);
 
+  const getSnapshot = useCallback(
+    () => ({ strings: { ...strings }, bools: { ...bools } }),
+    [bools, strings],
+  );
+
+  const applySnapshot = useCallback(
+    (nextStrings: Record<string, string>, nextBools: Record<string, boolean>) => {
+      setStrings(nextStrings);
+      setBools(nextBools);
+      setAdvancedOpen(
+        stringKeys.some((key) => key !== "q" && nextStrings[key]?.trim()) ||
+          boolKeys.some((key) => nextBools[key]),
+      );
+    },
+    [boolKeys, stringKeys],
+  );
+
   return {
     getString,
     getBool,
@@ -109,5 +126,7 @@ export function useCrmFilterParams({ stringKeys, boolKeys = [] }: FilterConfig) 
     activeCount,
     advancedOpen,
     setAdvancedOpen,
+    getSnapshot,
+    applySnapshot,
   };
 }

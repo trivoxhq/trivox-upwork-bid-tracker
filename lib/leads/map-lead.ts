@@ -10,6 +10,7 @@ type LeadWithUsers = {
   country: string | null;
   source: string | null;
   status: string;
+  lostReason: string | null;
   notes: string | null;
   assignedToId: string | null;
   assignedTo: { id: string; name: string; email: string } | null;

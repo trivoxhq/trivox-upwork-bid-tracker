@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
 import { canAssign, canDelete, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidLeadStatus } from "@/lib/leads/catalog";
+import { resolveLostReasonForLead } from "@/lib/lost-reasons/normalize";
+import { logCrmAudit } from "@/lib/audit/log-crm-audit";
 import { LEAD_INCLUDE_USERS, mapLeadToRow } from "@/lib/leads/map-lead";
 import { prisma } from "@/lib/prisma";
 
@@ -16,6 +18,7 @@ const UPDATABLE_KEYS = new Set([
   "country",
   "source",
   "status",
+  "lostReason",
   "notes",
   "assignedToId",
 ]);
@@ -78,7 +81,7 @@ export async function PUT(
 
     const existing = await prisma.lead.findUnique({
       where: { id },
-      select: { id: true, assignedToId: true, createdById: true },
+      select: { id: true, assignedToId: true, createdById: true, status: true, title: true },
     });
     if (!existing) return jsonError(404, "Lead not found.");
 
@@ -130,6 +133,18 @@ export async function PUT(
       }
     }
 
+    const nextStatus = (data.status as string | undefined) ?? existing.status;
+    if ("lostReason" in body || "status" in body) {
+      const lostReason = resolveLostReasonForLead(
+        nextStatus,
+        body.lostReason as string | null | undefined,
+        errors,
+      );
+      if (lostReason !== undefined && !errors.lostReason) {
+        data.lostReason = lostReason;
+      }
+    }
+
     if ("assignedToId" in body) {
       if (!canAssign(actor.role)) {
         errors.assignedToId = "Only administrators and managers can reassign leads.";
@@ -160,6 +175,14 @@ export async function PUT(
       include: LEAD_INCLUDE_USERS,
     });
 
+    void logCrmAudit({
+      userId: actor.id,
+      action: "updated",
+      entityType: "lead",
+      entityId: lead.id,
+      summary: `Updated lead "${lead.title}"`,
+    });
+
     return NextResponse.json({ success: true, lead: mapLeadToRow(lead) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
@@ -181,7 +204,22 @@ export async function DELETE(
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
     if (!canDelete(actor.role)) return jsonError(403, "Only administrators and managers can delete leads.");
 
+    const existing = await prisma.lead.findUnique({
+      where: { id },
+      select: { title: true },
+    });
+    if (!existing) return jsonError(404, "Lead not found.");
+
     await prisma.lead.delete({ where: { id } });
+
+    void logCrmAudit({
+      userId: actor.id,
+      action: "deleted",
+      entityType: "lead",
+      entityId: id,
+      summary: `Deleted lead "${existing.title}"`,
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {

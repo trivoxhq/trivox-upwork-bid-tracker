@@ -354,6 +354,8 @@ function SidebarScrollable({
   const calendarActive = pathname.startsWith("/dashboard/calendar");
   const dealsActive = pathname.startsWith("/dashboard/deals");
   const reportsActive = pathname.startsWith("/dashboard/reports");
+  const revenueActive = pathname.startsWith("/dashboard/revenue");
+  const activityActive = pathname.startsWith("/dashboard/activity");
   const insightsActive = pathname.startsWith("/dashboard/insights");
   const usersActive = pathname.startsWith("/dashboard/users");
   const settingsActive = pathname.startsWith("/dashboard/settings");
@@ -372,6 +374,8 @@ function SidebarScrollable({
           !calendarActive &&
           !dealsActive &&
           !reportsActive &&
+          !revenueActive &&
+          !activityActive &&
           !insightsActive &&
           !usersActive &&
           !settingsActive
@@ -471,6 +475,31 @@ function SidebarScrollable({
         icon={
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M4 20V4M10 20V10M16 20V14M22 20V6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/revenue"
+        active={revenueActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Revenue"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/activity"
+        active={activityActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Activity"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M12 8v4l3 3" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="9" />
           </svg>
         }
       />

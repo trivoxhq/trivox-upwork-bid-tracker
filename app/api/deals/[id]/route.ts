@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
 import { canAssign, canDelete, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidDealStage, isValidProbability } from "@/lib/deals/catalog";
+import { dealCloseDatePatch } from "@/lib/deals/close-dates";
+import { resolveLostReasonForDeal } from "@/lib/lost-reasons/normalize";
+import { logCrmAudit } from "@/lib/audit/log-crm-audit";
 import { DEAL_INCLUDE_USERS, mapDealToRow } from "@/lib/deals/map-deal";
 import { prisma } from "@/lib/prisma";
 
@@ -12,6 +15,7 @@ const UPDATABLE_KEYS = new Set([
   "clientName",
   "value",
   "stage",
+  "lostReason",
   "probability",
   "expectedCloseAt",
   "notes",
@@ -111,7 +115,15 @@ export async function PUT(
 
     const existing = await prisma.deal.findUnique({
       where: { id },
-      select: { id: true, ownerId: true, createdById: true },
+      select: {
+        id: true,
+        ownerId: true,
+        createdById: true,
+        stage: true,
+        title: true,
+        closedWonAt: true,
+        closedLostAt: true,
+      },
     });
     if (!existing) return jsonError(404, "Deal not found.");
 
@@ -164,6 +176,19 @@ export async function PUT(
         errors.stage = "stage must be one of the configured deal stages.";
       } else if (stage && !errors.stage) {
         data.stage = stage;
+        Object.assign(data, dealCloseDatePatch(existing, stage));
+      }
+    }
+
+    const nextStage = (data.stage as string | undefined) ?? existing.stage;
+    if ("lostReason" in body || "stage" in body) {
+      const lostReason = resolveLostReasonForDeal(
+        nextStage,
+        body.lostReason as string | null | undefined,
+        errors,
+      );
+      if (lostReason !== undefined && !errors.lostReason) {
+        data.lostReason = lostReason;
       }
     }
 
@@ -204,6 +229,14 @@ export async function PUT(
       where: { id },
       data,
       include: DEAL_INCLUDE_USERS,
+    });
+
+    void logCrmAudit({
+      userId: actor.id,
+      action: "updated",
+      entityType: "deal",
+      entityId: deal.id,
+      summary: `Updated deal "${deal.title}"`,
     });
 
     return NextResponse.json({ success: true, deal: mapDealToRow(deal) });

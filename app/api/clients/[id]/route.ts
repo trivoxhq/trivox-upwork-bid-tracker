@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
 import { canDelete, canWrite } from "@/lib/auth/roles";
 import { CLIENT_INCLUDE_HISTORY, mapClientToRow } from "@/lib/clients/map-client";
+import { logCrmAudit } from "@/lib/audit/log-crm-audit";
 import { prisma } from "@/lib/prisma";
 
 const UPDATABLE_KEYS = new Set([
@@ -13,6 +14,7 @@ const UPDATABLE_KEYS = new Set([
   "company",
   "country",
   "source",
+  "isRecurring",
   "notes",
 ]);
 
@@ -102,6 +104,14 @@ export async function PUT(
       }
     }
 
+    if ("isRecurring" in body) {
+      if (typeof body.isRecurring !== "boolean") {
+        errors.isRecurring = "isRecurring must be a boolean.";
+      } else {
+        data.isRecurring = body.isRecurring;
+      }
+    }
+
     if (Object.keys(errors).length > 0) return jsonError(400, "Validation failed.", errors);
     if (Object.keys(data).length === 0) return jsonError(400, "No updates provided.");
 
@@ -109,6 +119,14 @@ export async function PUT(
       where: { id },
       data,
       include: CLIENT_INCLUDE_HISTORY,
+    });
+
+    void logCrmAudit({
+      userId: actor.id,
+      action: "updated",
+      entityType: "client",
+      entityId: client.id,
+      summary: `Updated client "${client.name}"`,
     });
 
     return NextResponse.json({ success: true, client: mapClientToRow(client) });

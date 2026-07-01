@@ -2,6 +2,7 @@ import { DEAL_STAGE_OPTIONS } from "@/lib/deals/catalog";
 import { LEAD_STATUS_OPTIONS } from "@/lib/leads/catalog";
 import type { Role } from "@/generated/prisma-client";
 import { canViewTeamWide } from "@/lib/auth/roles";
+import { bidCountsTowardRevenue } from "@/lib/revenue/dedupe";
 import { prisma } from "@/lib/prisma";
 import { pctNumeratorOverTotal } from "@/lib/stats/pct";
 import type { CrmReportsPayload } from "@/lib/reports/types";
@@ -26,18 +27,18 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
 
   const bidWhere = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
 
-  const [leads, deals, bidsWonAgg, bidsTotal, bidsWonCount] = await Promise.all([
+  const [leads, deals, wonBids, bidsTotal, bidsWonCount] = await Promise.all([
     prisma.lead.findMany({
       where: leadWhere,
-      select: { status: true, source: true },
+      select: { status: true, source: true, lostReason: true },
     }),
     prisma.deal.findMany({
       where: dealWhere,
-      select: { stage: true, value: true, probability: true },
+      select: { stage: true, value: true, probability: true, lostReason: true },
     }),
-    prisma.bid.aggregate({
+    prisma.bid.findMany({
       where: { ...bidWhere, status: "Won" },
-      _sum: { value: true },
+      select: { value: true, deal: { select: { stage: true } } },
     }),
     prisma.bid.count({ where: bidWhere }),
     prisma.bid.count({ where: { ...bidWhere, status: "Won" } }),
@@ -45,6 +46,7 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
 
   const leadsByStage = Object.fromEntries(LEAD_STATUS_OPTIONS.map((stage) => [stage, 0]));
   const lostBySourceMap = new Map<string, number>();
+  const lostByReasonMap = new Map<string, number>();
 
   for (const lead of leads) {
     if (leadsByStage[lead.status] !== undefined) {
@@ -56,6 +58,8 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
     if (lead.status === "Lost") {
       const source = lead.source?.trim() || "Unknown";
       lostBySourceMap.set(source, (lostBySourceMap.get(source) ?? 0) + 1);
+      const reason = lead.lostReason?.trim() || "Unspecified";
+      lostByReasonMap.set(reason, (lostByReasonMap.get(reason) ?? 0) + 1);
     }
   }
 
@@ -82,7 +86,10 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
 
     if (deal.stage === "Closed Won") {
       dealsWonRevenue += deal.value;
-    } else if (deal.stage !== "Closed Lost") {
+    } else if (deal.stage === "Closed Lost") {
+      const reason = deal.lostReason?.trim() || "Unspecified";
+      lostByReasonMap.set(reason, (lostByReasonMap.get(reason) ?? 0) + 1);
+    } else {
       pipelineValue += deal.value;
       weightedPipelineValue += (deal.value * deal.probability) / 100;
     }
@@ -93,8 +100,14 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
   const dealsClosed = dealsClosedWon + dealsClosedLost;
   const dealWinRate = pctNumeratorOverTotal(dealsClosedWon, dealsClosed);
 
-  const bidsWonRevenue = bidsWonAgg._sum.value ?? 0;
+  const countingBids = wonBids.filter(bidCountsTowardRevenue);
+  const bidsWonRevenue = countingBids.reduce((sum, bid) => sum + bid.value, 0);
+  const linkedBidsExcluded = wonBids.length - countingBids.length;
   const bidWinRate = pctNumeratorOverTotal(bidsWonCount, bidsTotal);
+
+  const lostByReason = Array.from(lostByReasonMap.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
 
   return {
     leads: {
@@ -120,6 +133,7 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
       dealsWon: dealsWonRevenue,
       bidsWon: bidsWonRevenue,
       total: dealsWonRevenue + bidsWonRevenue,
+      linkedBidsExcluded,
     },
     winRate: {
       leads: leadConversionRate,
@@ -130,6 +144,7 @@ export async function computeCrmReports(actor: ReportActor): Promise<CrmReportsP
       leadsLost,
       dealsClosedLost,
       leadsLostBySource,
+      lostByReason,
     },
   };
 }

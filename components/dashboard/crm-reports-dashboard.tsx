@@ -317,11 +317,19 @@ export function CrmReportsDashboard() {
               <dt className="text-text-secondary">Won bids</dt>
               <dd className="font-semibold tabular-nums text-success">{formatCurrency(reports.revenue.bidsWon)}</dd>
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+            <div className="flex items-center justify-between gap-3">
               <dt className="text-text-secondary">Total revenue</dt>
               <dd className="font-semibold tabular-nums text-success">{formatCurrency(reports.revenue.total)}</dd>
             </div>
-            <div className="flex items-center justify-between gap-3">
+            {reports.revenue.linkedBidsExcluded > 0 ? (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-secondary">Linked bids excluded</dt>
+                <dd className="font-semibold tabular-nums text-text-secondary">
+                  {reports.revenue.linkedBidsExcluded}
+                </dd>
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
               <dt className="text-text-secondary">Pipeline value</dt>
               <dd className="font-semibold tabular-nums text-text-primary">{formatCurrency(reports.deals.pipelineValue)}</dd>
             </div>
@@ -346,6 +354,17 @@ export function CrmReportsDashboard() {
               <dd className="font-semibold tabular-nums text-danger">{reports.lostOverview.dealsClosedLost}</dd>
             </div>
           </dl>
+          {reports.lostOverview.lostByReason.length > 0 ? (
+            <dl className="mt-4 space-y-2 border-t border-border/60 pt-4 text-sm">
+              <dt className={DASH_SECTION_TITLE}>Lost by reason</dt>
+              {reports.lostOverview.lostByReason.map((row) => (
+                <div key={row.reason} className="flex items-center justify-between gap-3">
+                  <dd className="text-text-secondary">{row.reason}</dd>
+                  <dt className="font-semibold tabular-nums text-danger">{row.count}</dt>
+                </div>
+              ))}
+            </dl>
+          ) : null}
           <div className="mt-4 h-52">
             {reports.lostOverview.leadsLostBySource.length > 0 && lostChart ? (
               <Doughnut data={lostChart} options={lostChartOptions} />

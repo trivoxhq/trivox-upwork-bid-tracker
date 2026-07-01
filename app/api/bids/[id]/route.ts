@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { BID_STATUS_LABELS, isValidBidStatus } from "@/lib/bids/catalog";
+import { resolveLostReasonForBid } from "@/lib/lost-reasons/normalize";
+import { logCrmAudit } from "@/lib/audit/log-crm-audit";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canEditAnyBid, canDelete } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
@@ -12,9 +14,11 @@ const ADMIN_UPDATABLE_KEYS = new Set([
   "bidLink",
   "nicheId",
   "status",
+  "lostReason",
   "value",
   "notes",
   "addedById",
+  "dealId",
 ]);
 
 function jsonError(status: number, message: string, errors?: Record<string, string>) {
@@ -50,6 +54,7 @@ function parseStatus(value: unknown, errors: Record<string, string>): string | u
 
 async function buildAdminUpdate(
   body: Record<string, unknown>,
+  existingStatus: string,
 ): Promise<{ data: Prisma.BidUpdateInput } | { response: NextResponse }> {
   const errors: Record<string, string> = {};
   const data: Prisma.BidUpdateInput = {};
@@ -158,6 +163,37 @@ async function buildAdminUpdate(
     }
   }
 
+  const nextStatus = (data.status as string | undefined) ?? existingStatus;
+  if ("lostReason" in body || "status" in body) {
+    const lostReason = resolveLostReasonForBid(
+      nextStatus,
+      body.lostReason as string | null | undefined,
+      errors,
+    );
+    if (lostReason !== undefined && !errors.lostReason) {
+      data.lostReason = lostReason;
+    }
+  }
+
+  if ("dealId" in body) {
+    if (body.dealId === null || body.dealId === "") {
+      data.deal = { disconnect: true };
+    } else if (typeof body.dealId === "string" && body.dealId.trim()) {
+      const dealId = body.dealId.trim();
+      const deal = await prisma.deal.findUnique({
+        where: { id: dealId },
+        select: { id: true },
+      });
+      if (!deal) {
+        errors.dealId = "Unknown deal.";
+      } else {
+        data.deal = { connect: { id: dealId } };
+      }
+    } else {
+      errors.dealId = "dealId must be a string or null.";
+    }
+  }
+
   if (Object.keys(errors).length > 0) {
     return { response: jsonError(400, "Validation failed.", errors) };
   }
@@ -195,7 +231,7 @@ export async function PUT(
 
     const bid = await prisma.bid.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, status: true, client: true },
     });
 
     if (!bid) {
@@ -224,7 +260,7 @@ export async function PUT(
       return jsonError(400, `Unknown fields: ${unknownAdminKeys.join(", ")}.`);
     }
 
-    const built = await buildAdminUpdate(body);
+    const built = await buildAdminUpdate(body, bid.status);
     if ("response" in built) return built.response;
 
     const updated = await prisma.bid.update({
@@ -234,7 +270,16 @@ export async function PUT(
         addedBy: { select: { name: true } },
         profile: { select: { id: true, name: true, isActive: true } },
         niche: { select: { id: true, name: true, isActive: true } },
+        deal: { select: { id: true, title: true, stage: true } },
       },
+    });
+
+    void logCrmAudit({
+      userId: actor.id,
+      action: "updated",
+      entityType: "bid",
+      entityId: updated.id,
+      summary: `Updated bid for "${updated.client}"`,
     });
 
     return NextResponse.json({ success: true, bid: updated });

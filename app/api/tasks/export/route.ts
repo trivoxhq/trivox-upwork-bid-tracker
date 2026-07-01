@@ -1,24 +1,25 @@
 import { NextResponse } from "next/server";
 import { getActiveActor } from "@/lib/auth/get-active-actor";
 import { parseExportFormat, spreadsheetDownloadResponse } from "@/lib/spreadsheet/download-response";
+import { buildTaskExportWhere } from "@/lib/filters/export-where";
 import {
   TASK_EXPORT_HEADERS,
   TASK_EXPORT_INCLUDE,
   buildTaskExportRows,
-  taskExportWhere,
 } from "@/lib/tasks/spreadsheet";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
-    const format = parseExportFormat(new URL(request.url).searchParams.get("format"));
+    const searchParams = new URL(request.url).searchParams;
+    const format = parseExportFormat(searchParams.get("format"));
     const actor = await getActiveActor();
     if (!actor?.isActive) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
     const tasks = await prisma.crmTask.findMany({
-      where: taskExportWhere(actor),
+      where: buildTaskExportWhere(actor, searchParams),
       include: TASK_EXPORT_INCLUDE,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     });

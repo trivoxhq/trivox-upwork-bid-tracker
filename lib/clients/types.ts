@@ -22,6 +22,7 @@ export type ClientRow = {
   company: string | null;
   country: string | null;
   source: string | null;
+  isRecurring: boolean;
   notes: string | null;
   createdBy: ClientUserSummary;
   history: ClientHistoryRow[];

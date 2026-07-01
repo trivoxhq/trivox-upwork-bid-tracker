@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import type { BidTableRow } from "@/components/dashboard/bids-types";
 import { BID_STATUS_OPTIONS } from "@/components/dashboard/bid-status-badge";
+import { LostReasonSelect } from "@/components/dashboard/lost-reason-select";
 import { modalAnimation } from "@/components/ui/motion";
 
 type EditBidModalProps = {
@@ -45,6 +46,14 @@ function toDateInputValue(iso: string): string {
 
 type CatalogRow = { id: string; name: string; isActive: boolean };
 
+type DealLookupRow = {
+  id: string;
+  title: string;
+  clientName: string;
+  stage: string;
+  value: number;
+};
+
 function mergeCatalogRows(rows: CatalogRow[], fallback: { id: string; name: string } | null): CatalogRow[] {
   if (!fallback?.id) return rows;
   if (rows.some((r) => r.id === fallback.id)) return rows;
@@ -69,11 +78,14 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
   const [bidLink, setBidLink] = useState("");
   const [nicheId, setNicheId] = useState("");
   const [status, setStatus] = useState("");
+  const [lostReason, setLostReason] = useState("");
+  const [dealId, setDealId] = useState("");
   const [value, setValue] = useState("");
   const [notes, setNotes] = useState("");
 
   const [profiles, setProfiles] = useState<CatalogRow[]>([]);
   const [niches, setNiches] = useState<CatalogRow[]>([]);
+  const [deals, setDeals] = useState<DealLookupRow[]>([]);
   const [catalogsLoading, setCatalogsLoading] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -104,6 +116,8 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
     setBidLink(bid.bidLink ?? "");
     setNicheId(bid.nicheId);
     setStatus(bid.status);
+    setLostReason(bid.lostReason ?? "");
+    setDealId(bid.dealId ?? "");
     setValue(String(bid.value));
     setNotes(bid.notes ?? "");
     setError(null);
@@ -115,17 +129,21 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
     setCatalogsLoading(true);
     (async () => {
       try {
-        const [pr, nr] = await Promise.all([
+        const [pr, nr, dr] = await Promise.all([
           fetch("/api/profiles?includeInactive=1", { credentials: "include" }),
           fetch("/api/niches?includeInactive=1", { credentials: "include" }),
+          fetch("/api/deals/lookup", { credentials: "include" }),
         ]);
         const pj = (await pr.json().catch(() => null)) as { success?: boolean; profiles?: CatalogRow[] } | null;
         const nj = (await nr.json().catch(() => null)) as { success?: boolean; niches?: CatalogRow[] } | null;
+        const dj = (await dr.json().catch(() => null)) as { success?: boolean; deals?: DealLookupRow[] } | null;
         if (cancelled) return;
         if (pr.ok && pj?.success && Array.isArray(pj.profiles)) setProfiles(pj.profiles);
         else setProfiles([]);
         if (nr.ok && nj?.success && Array.isArray(nj.niches)) setNiches(nj.niches);
         else setNiches([]);
+        if (dr.ok && dj?.success && Array.isArray(dj.deals)) setDeals(dj.deals);
+        else setDeals([]);
       } finally {
         if (!cancelled) setCatalogsLoading(false);
       }
@@ -186,6 +204,9 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
       const link = bidLink.trim();
       payload.bidLink = link.length > 0 ? link : null;
       payload.notes = notes.trim().length > 0 ? notes.trim() : null;
+      payload.lostReason =
+        status.trim() === "Lost" && lostReason.trim() ? lostReason.trim() : null;
+      payload.dealId = dealId.trim() || null;
 
       await sendPut(bid.id, payload);
       return;
@@ -194,6 +215,7 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
     const payload: Record<string, unknown> = {
       status: status.trim(),
       notes: notes.trim().length > 0 ? notes.trim() : null,
+      lostReason: status.trim() === "Lost" && lostReason.trim() ? lostReason.trim() : null,
     };
 
     if (!status.trim()) {
@@ -482,6 +504,46 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
                       ))}
                     </select>
                   </div>
+
+                  {status.trim() === "Lost" ? (
+                    <div className="sm:col-span-2">
+                      <label className={labelClass} htmlFor="edit-bid-lost-reason">
+                        Lost reason
+                      </label>
+                      <LostReasonSelect
+                        value={lostReason}
+                        onChange={setLostReason}
+                        disabled={submitting}
+                        className={inputClass}
+                      />
+                    </div>
+                  ) : null}
+
+                  {isAdmin ? (
+                    <div className="sm:col-span-2">
+                      <label className={labelClass} htmlFor="edit-bid-deal">
+                        Linked deal
+                      </label>
+                      <select
+                        id="edit-bid-deal"
+                        value={dealId}
+                        onChange={(ev) => setDealId(ev.target.value)}
+                        disabled={submitting || catalogsLoading}
+                        className={`${inputClass} cursor-pointer appearance-none bg-size-[1rem] bg-position-[right_0.65rem_center] bg-no-repeat pr-10`}
+                        style={selectChevronStyle}
+                      >
+                        <option value="">No linked deal</option>
+                        {dealId && !deals.some((d) => d.id === dealId) && bid.dealTitle ? (
+                          <option value={dealId}>{bid.dealTitle} (current)</option>
+                        ) : null}
+                        {deals.map((deal) => (
+                          <option key={deal.id} value={deal.id}>
+                            {deal.title} — {deal.clientName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
 
                   <div className="sm:col-span-2">
                     <label htmlFor="edit-bid-notes" className={labelClass}>

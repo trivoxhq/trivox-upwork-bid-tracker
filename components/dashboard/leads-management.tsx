@@ -14,7 +14,9 @@ import {
 } from "@/components/dashboard/dashboard-classes";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CrmImportExportToolbar } from "@/components/dashboard/crm-import-export-toolbar";
+import { CrmFilterPresets } from "@/components/dashboard/crm-filter-presets";
 import { CrmNotesPanel } from "@/components/dashboard/crm-notes-panel";
+import { LostReasonSelect } from "@/components/dashboard/lost-reason-select";
 import {
   CrmAdvancedFiltersPanel,
   CrmFilterCheckbox,
@@ -42,6 +44,7 @@ type LeadFormState = {
   country: string;
   source: string;
   status: string;
+  lostReason: string;
   notes: string;
   assignedToId: string;
 };
@@ -64,6 +67,7 @@ const emptyForm: LeadFormState = {
   country: "",
   source: "",
   status: "New",
+  lostReason: "",
   notes: "",
   assignedToId: "",
 };
@@ -89,6 +93,7 @@ function leadToForm(lead: LeadRow): LeadFormState {
     country: lead.country ?? "",
     source: lead.source ?? "",
     status: lead.status,
+    lostReason: lead.lostReason ?? "",
     notes: lead.notes ?? "",
     assignedToId: lead.assignedToId ?? "",
   };
@@ -109,6 +114,9 @@ function compactPayload(form: LeadFormState, isAdmin: boolean) {
   if (isAdmin) {
     payload.assignedToId = form.assignedToId || null;
   }
+
+  payload.lostReason =
+    form.status === "Lost" && form.lostReason.trim() ? form.lostReason.trim() : null;
 
   return payload;
 }
@@ -180,6 +188,11 @@ function LeadsManagementInner({
 
   const countryOptions = useMemo(
     () => distinctSorted(initialLeads.map((lead) => lead.country)),
+    [initialLeads],
+  );
+
+  const showLostReasonColumn = useMemo(
+    () => initialLeads.some((lead) => lead.lostReason),
     [initialLeads],
   );
 
@@ -435,6 +448,19 @@ function LeadsManagementInner({
             </div>
           </div>
 
+          {form.status === "Lost" ? (
+            <div>
+              <label className={labelClass} htmlFor="lead-lost-reason">
+                Lost reason
+              </label>
+              <LostReasonSelect
+                value={form.lostReason}
+                onChange={(value) => setField("lostReason", value)}
+                className={inputClass}
+              />
+            </div>
+          ) : null}
+
           {isAdmin ? (
             <div>
               <label className={labelClass} htmlFor="lead-assignee">
@@ -491,7 +517,13 @@ function LeadsManagementInner({
               advancedOpen={filters.advancedOpen}
               onToggleAdvanced={() => filters.setAdvancedOpen((open) => !open)}
               onReset={filters.resetAll}
-            />
+            >
+              <CrmFilterPresets
+                entity="leads"
+                getSnapshot={filters.getSnapshot}
+                applySnapshot={filters.applySnapshot}
+              />
+            </CrmFilterToolbar>
           </div>
         </div>
 
@@ -606,6 +638,7 @@ function LeadsManagementInner({
                 <tr>
                   <th className={DASH_TABLE_TH}>Lead</th>
                   <th className={DASH_TABLE_TH}>Stage</th>
+                  {showLostReasonColumn ? <th className={DASH_TABLE_TH}>Lost reason</th> : null}
                   <th className={DASH_TABLE_TH}>Source</th>
                   <th className={DASH_TABLE_TH}>Owner</th>
                   <th className={DASH_TABLE_TH}>Updated</th>
@@ -630,6 +663,11 @@ function LeadsManagementInner({
                     <td className="px-4 py-3 align-top">
                       <LeadStatusPill status={lead.status} />
                     </td>
+                    {showLostReasonColumn ? (
+                      <td className="px-4 py-3 align-top text-text-secondary">
+                        {lead.lostReason ?? "—"}
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3 align-top text-text-secondary">
                       {lead.source ?? "-"}
                     </td>

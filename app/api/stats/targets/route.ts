@@ -23,6 +23,22 @@ function utcMonthEnd(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 }
 
+/** UTC week starting Monday 00:00:00. */
+function utcWeekStart(d: Date): Date {
+  const day = d.getUTCDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysSinceMonday, 0, 0, 0, 0),
+  );
+}
+
+function utcWeekEnd(d: Date): Date {
+  const start = utcWeekStart(d);
+  return new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 6, 23, 59, 59, 999),
+  );
+}
+
 function dailyStatus(todayWon: number, dailyTarget: number): "good" | "warn" | "bad" {
   if (todayWon >= dailyTarget) return "good";
   if (dailyTarget <= 0) return "good";
@@ -56,12 +72,12 @@ export async function GET() {
 
     const users = canViewTeamWide(actor.role)
         ? await prisma.user.findMany({
-            select: { id: true, name: true, dailyTarget: true, monthlyTarget: true },
+            select: { id: true, name: true, dailyTarget: true, weeklyTarget: true, monthlyTarget: true },
             orderBy: { name: "asc" },
           })
         : await prisma.user.findMany({
             where: { id: actor.id },
-            select: { id: true, name: true, dailyTarget: true, monthlyTarget: true },
+            select: { id: true, name: true, dailyTarget: true, weeklyTarget: true, monthlyTarget: true },
           });
 
     if (users.length === 0) {
@@ -72,18 +88,29 @@ export async function GET() {
     const now = new Date();
     const todayStart = utcMidnight(now);
     const todayEnd = utcEndOfDay(now);
+    const weekStart = utcWeekStart(now);
+    const weekEnd = utcWeekEnd(now);
     const monthStart = utcMonthStart(now);
     const monthEnd = utcMonthEnd(now);
 
     const scope = { addedById: { in: userIds } };
 
-    const [todayWonRows, monthWonRows, monthLostRows] = await Promise.all([
+    const [todayWonRows, weekWonRows, monthWonRows, monthLostRows] = await Promise.all([
       prisma.bid.groupBy({
         by: ["addedById"],
         where: {
           ...scope,
           status: WON_STATUS,
           date: { gte: todayStart, lte: todayEnd },
+        },
+        _sum: { value: true },
+      }),
+      prisma.bid.groupBy({
+        by: ["addedById"],
+        where: {
+          ...scope,
+          status: WON_STATUS,
+          date: { gte: weekStart, lte: weekEnd },
         },
         _sum: { value: true },
       }),
@@ -108,24 +135,30 @@ export async function GET() {
     ]);
 
     const todayWonByUser = sumsByUser(todayWonRows);
+    const weekWonByUser = sumsByUser(weekWonRows);
     const monthWonByUser = sumsByUser(monthWonRows);
     const monthLostByUser = sumsByUser(monthLostRows);
 
     const body = users.map((u) => {
       const todayWon = todayWonByUser.get(u.id) ?? 0;
+      const weekWon = weekWonByUser.get(u.id) ?? 0;
       const monthWon = monthWonByUser.get(u.id) ?? 0;
       const monthLost = monthLostByUser.get(u.id) ?? 0;
       const monthRemaining = Math.max(0, u.monthlyTarget - monthWon);
+      const weekRemaining = Math.max(0, u.weeklyTarget - weekWon);
 
       return {
         userId: u.id,
         name: u.name,
         dailyTarget: u.dailyTarget,
+        weeklyTarget: u.weeklyTarget,
         monthlyTarget: u.monthlyTarget,
         todayWon,
+        weekWon,
         monthWon,
         monthLost,
         monthRemaining,
+        weekRemaining,
         dailyStatus: dailyStatus(todayWon, u.dailyTarget),
       };
     });

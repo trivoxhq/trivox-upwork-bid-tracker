@@ -24,10 +24,12 @@ model User {
   role           Role
   password       String
   dailyTarget    Int      @default(0)
+  weeklyTarget   Int      @default(0)
   monthlyTarget  Int      @default(0)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   bids           Bid[]
+  crmAuditLogs   CrmAuditLog[]
   leadsCreated   Lead[]   @relation("LeadCreatedBy")
   leadsAssigned  Lead[]   @relation("LeadAssignedTo")
   clientsCreated Client[] @relation("ClientCreatedBy")
@@ -73,21 +75,25 @@ model Bid {
   nicheId   String
   client    String
   bidLink   String?
-  status    String   @default("New")
-  value     Int      @default(0)
-  notes     String?
-  addedById String
-  addedBy   User     @relation(fields: [addedById], references: [id])
-  profile   Profile  @relation(fields: [profileId], references: [id])
-  niche     Niche    @relation(fields: [nicheId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status     String   @default("New")
+  value      Int      @default(0)
+  notes      String?
+  lostReason String?
+  dealId     String?
+  deal       Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  addedById  String
+  addedBy    User     @relation(fields: [addedById], references: [id])
+  profile    Profile  @relation(fields: [profileId], references: [id])
+  niche      Niche    @relation(fields: [nicheId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([addedById])
   @@index([date])
   @@index([status])
   @@index([profileId])
   @@index([nicheId])
+  @@index([dealId])
   @@map("bids")
 }
 
@@ -101,6 +107,7 @@ model Lead {
   country      String?
   source       String?
   status       String   @default("New")
+  lostReason   String?
   notes        String?  @db.Text
   assignedToId String?
   assignedTo   User?    @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
@@ -125,6 +132,7 @@ model Client {
   company     String?
   country     String?
   source      String?
+  isRecurring Boolean         @default(false)
   notes       String?         @db.Text
   createdById String
   createdBy   User            @relation("ClientCreatedBy", fields: [createdById], references: [id])
@@ -136,6 +144,7 @@ model Client {
   @@index([name])
   @@index([company])
   @@index([source])
+  @@index([isRecurring])
   @@index([createdAt])
   @@map("clients")
 }
@@ -211,11 +220,15 @@ model Deal {
   stage           String    @default("Qualification")
   probability     Int       @default(0)
   expectedCloseAt DateTime?
+  lostReason      String?
+  closedWonAt     DateTime?
+  closedLostAt    DateTime?
   notes           String?   @db.Text
   ownerId         String?
   owner           User?     @relation("DealOwner", fields: [ownerId], references: [id])
   createdById     String
   createdBy       User      @relation("DealCreatedBy", fields: [createdById], references: [id])
+  bids            Bid[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -223,6 +236,8 @@ model Deal {
   @@index([createdById])
   @@index([stage])
   @@index([expectedCloseAt])
+  @@index([closedWonAt])
+  @@index([closedLostAt])
   @@index([createdAt])
   @@map("deals")
 }
@@ -259,4 +274,20 @@ model CrmAttachment {
   @@index([noteId])
   @@index([createdById])
   @@map("crm_attachments")
+}
+
+model CrmAuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  summary    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("crm_audit_logs")
 }

@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
 import { canAssign, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidLeadStatus } from "@/lib/leads/catalog";
+import { resolveLostReasonForLead } from "@/lib/lost-reasons/normalize";
+import { logCrmAudit } from "@/lib/audit/log-crm-audit";
 import { LEAD_INCLUDE_USERS, mapLeadToRow } from "@/lib/leads/map-lead";
 import { prisma } from "@/lib/prisma";
 
@@ -18,6 +20,7 @@ type CreateLeadBody = {
   status?: unknown;
   notes?: unknown;
   assignedToId?: unknown;
+  lostReason?: unknown;
 };
 
 function jsonError(status: number, message: string, errors?: Record<string, string>) {
@@ -132,6 +135,15 @@ export async function POST(request: Request) {
       return jsonError(400, "Validation failed.", errors);
     }
 
+    const lostReason = resolveLostReasonForLead(
+      status,
+      body.lostReason as string | null | undefined,
+      errors,
+    );
+    if (Object.keys(errors).length > 0) {
+      return jsonError(400, "Validation failed.", errors);
+    }
+
     const lead = await prisma.lead.create({
       data: {
         title: title!,
@@ -142,11 +154,20 @@ export async function POST(request: Request) {
         country,
         source,
         status,
+        lostReason: lostReason ?? null,
         notes,
         assignedToId,
         createdById: actor.id,
       },
       include: LEAD_INCLUDE_USERS,
+    });
+
+    void logCrmAudit({
+      userId: actor.id,
+      action: "created",
+      entityType: "lead",
+      entityId: lead.id,
+      summary: `Created lead "${lead.title}"`,
     });
 
     return NextResponse.json({ success: true, lead: mapLeadToRow(lead) }, { status: 201 });

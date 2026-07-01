@@ -36,6 +36,7 @@ type ClientFormState = {
   company: string;
   country: string;
   source: string;
+  isRecurring: boolean;
   notes: string;
 };
 
@@ -61,6 +62,7 @@ const emptyClientForm: ClientFormState = {
   company: "",
   country: "",
   source: "",
+  isRecurring: false,
   notes: "",
 };
 
@@ -97,6 +99,7 @@ function clientToForm(client: ClientRow): ClientFormState {
     company: client.company ?? "",
     country: client.country ?? "",
     source: client.source ?? "",
+    isRecurring: client.isRecurring,
     notes: client.notes ?? "",
   };
 }
@@ -104,6 +107,7 @@ function clientToForm(client: ClientRow): ClientFormState {
 function compactClientPayload(form: ClientFormState) {
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
+    isRecurring: form.isRecurring,
   };
 
   for (const key of ["email", "phone", "company", "country", "source", "notes"] as const) {
@@ -445,6 +449,16 @@ function ClientsManagementInner({
             </datalist>
           </div>
 
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-text-primary">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-input-border text-brand-primary focus:ring-brand-primary/25"
+              checked={form.isRecurring}
+              onChange={(e) => setField("isRecurring", e.target.checked)}
+            />
+            <span>Recurring client</span>
+          </label>
+
           <div>
             <label className={labelClass} htmlFor="client-notes">
               Notes
@@ -668,6 +682,11 @@ function ClientsManagementInner({
                       >
                         {client.name}
                       </button>
+                      {client.isRecurring ? (
+                        <span className="ml-2 inline-flex rounded-full border border-info/35 bg-info/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
+                          Recurring
+                        </span>
+                      ) : null}
                       <div className="mt-1 text-xs text-text-secondary">
                         {client.company ?? "No company"}
                         {client.country ? ` - ${client.country}` : ""}

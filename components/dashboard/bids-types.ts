@@ -9,6 +9,9 @@ export type BidTableRow = {
   client: string;
   bidLink: string | null;
   status: string;
+  lostReason: string | null;
+  dealId: string | null;
+  dealTitle: string | null;
   value: number;
   notes: string | null;
   addedById: string;

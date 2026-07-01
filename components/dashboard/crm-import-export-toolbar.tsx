@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DASH_BTN_TOOLBAR } from "@/components/dashboard/dashboard-classes";
 import toast from "react-hot-toast";
 
@@ -21,8 +21,14 @@ const ENTITY_LABELS: Record<CrmEntity, string> = {
   bids: "bids",
 };
 
-async function downloadExport(entity: CrmEntity, format: "csv" | "xlsx") {
-  const res = await fetch(`/api/${entity}/export?format=${format}`, {
+async function downloadExport(
+  entity: CrmEntity,
+  format: "csv" | "xlsx",
+  filterQuery?: string,
+) {
+  const qs = filterQuery?.trim();
+  const url = `/api/${entity}/export?format=${format}${qs ? `&${qs}` : ""}`;
+  const res = await fetch(url, {
     method: "GET",
     credentials: "include",
   });
@@ -38,14 +44,14 @@ async function downloadExport(entity: CrmEntity, format: "csv" | "xlsx") {
   const fallback = `${entity}-export-${new Date().toISOString().slice(0, 10)}.${format === "xlsx" ? "xlsx" : "csv"}`;
   const filename = filenameMatch?.[1] ?? fallback;
 
-  const url = window.URL.createObjectURL(blob);
+  const objectUrl = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
+  a.href = objectUrl;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  window.URL.revokeObjectURL(url);
+  window.URL.revokeObjectURL(objectUrl);
 }
 
 export function CrmImportExportToolbar({
@@ -54,6 +60,7 @@ export function CrmImportExportToolbar({
   className = "",
 }: CrmImportExportToolbarProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState<"csv" | "xlsx" | null>(null);
   const [importing, setImporting] = useState(false);
@@ -62,7 +69,7 @@ export function CrmImportExportToolbar({
   async function onExport(format: "csv" | "xlsx") {
     setExporting(format);
     try {
-      await downloadExport(entity, format);
+      await downloadExport(entity, format, searchParams.toString());
       toast.success(format === "xlsx" ? "Excel file downloaded." : "CSV exported successfully.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed.");

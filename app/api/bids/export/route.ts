@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
 import { getActiveActor } from "@/lib/auth/get-active-actor";
+import { buildBidExportWhere } from "@/lib/filters/export-where";
 import { buildBidExportRows, BID_EXPORT_HEADERS } from "@/lib/bids/export-bids-rows";
-import { canViewTeamWide } from "@/lib/auth/roles";
 import { parseExportFormat, spreadsheetDownloadResponse } from "@/lib/spreadsheet/download-response";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
-    const format = parseExportFormat(new URL(request.url).searchParams.get("format"));
+    const searchParams = new URL(request.url).searchParams;
+    const format = parseExportFormat(searchParams.get("format"));
     const actor = await getActiveActor();
     if (!actor?.isActive) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const where = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
     const bids = await prisma.bid.findMany({
-      where,
+      where: buildBidExportWhere(actor, searchParams),
       orderBy: { date: "asc" },
       select: {
         date: true,

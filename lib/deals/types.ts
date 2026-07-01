@@ -12,6 +12,9 @@ export type DealRow = {
   stage: string;
   probability: number;
   expectedCloseAt: string | null;
+  lostReason: string | null;
+  closedWonAt: string | null;
+  closedLostAt: string | null;
   notes: string | null;
   ownerId: string | null;
   owner: DealUserSummary | null;

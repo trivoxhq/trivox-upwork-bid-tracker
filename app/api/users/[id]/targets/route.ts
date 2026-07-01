@@ -48,6 +48,7 @@ export async function PUT(
     const record = body as Record<string, unknown>;
     const errors: Record<string, string> = {};
     const dailyTarget = parseNonNegativeInt(record.dailyTarget, "dailyTarget", errors);
+    const weeklyTarget = parseNonNegativeInt(record.weeklyTarget, "weeklyTarget", errors);
     const monthlyTarget = parseNonNegativeInt(record.monthlyTarget, "monthlyTarget", errors);
 
     if (Object.keys(errors).length > 0) {
@@ -62,6 +63,7 @@ export async function PUT(
         where: { id },
         data: {
           dailyTarget: dailyTarget!,
+          weeklyTarget: weeklyTarget!,
           monthlyTarget: monthlyTarget!,
         },
         select: ADMIN_USER_PUBLIC_SELECT,

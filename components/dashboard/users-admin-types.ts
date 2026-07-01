@@ -6,6 +6,7 @@ export type AdminUserRow = {
   name: string;
   role: Role;
   dailyTarget: number;
+  weeklyTarget: number;
   monthlyTarget: number;
   isActive: boolean;
   createdAt: string;

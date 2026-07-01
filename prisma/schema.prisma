@@ -11,6 +11,9 @@ datasource db {
 
 enum Role {
   admin
+  manager
+  sales_member
+  viewer
   member
 }
 
@@ -33,6 +36,10 @@ model User {
   tasksAssigned  CrmTask[] @relation("TaskAssignedTo")
   calendarEventsCreated CalendarEvent[] @relation("CalendarEventCreatedBy")
   calendarEventsOwned   CalendarEvent[] @relation("CalendarEventOwner")
+  dealsCreated          Deal[]          @relation("DealCreatedBy")
+  dealsOwned            Deal[]          @relation("DealOwner")
+  crmNotesCreated       CrmNote[]       @relation("CrmNoteCreatedBy")
+  crmAttachmentsCreated CrmAttachment[] @relation("CrmAttachmentCreatedBy")
 
   @@map("users")
 }
@@ -194,4 +201,62 @@ model CalendarEvent {
   @@index([type])
   @@index([startsAt])
   @@map("calendar_events")
+}
+
+model Deal {
+  id              String    @id @default(uuid())
+  title           String
+  clientName      String
+  value           Int       @default(0)
+  stage           String    @default("Qualification")
+  probability     Int       @default(0)
+  expectedCloseAt DateTime?
+  notes           String?   @db.Text
+  ownerId         String?
+  owner           User?     @relation("DealOwner", fields: [ownerId], references: [id])
+  createdById     String
+  createdBy       User      @relation("DealCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([createdById])
+  @@index([stage])
+  @@index([expectedCloseAt])
+  @@index([createdAt])
+  @@map("deals")
+}
+
+model CrmNote {
+  id          String          @id @default(uuid())
+  entityType  String
+  entityId    String
+  body        String          @db.Text
+  createdById String
+  createdBy   User            @relation("CrmNoteCreatedBy", fields: [createdById], references: [id])
+  attachments CrmAttachment[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("crm_notes")
+}
+
+model CrmAttachment {
+  id           String   @id @default(uuid())
+  noteId       String
+  note         CrmNote  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  storedName   String
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  createdById  String
+  createdBy    User     @relation("CrmAttachmentCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([noteId])
+  @@index([createdById])
+  @@map("crm_attachments")
 }

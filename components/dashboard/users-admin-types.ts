@@ -1,8 +1,10 @@
+import type { Role } from "@/generated/prisma-client";
+
 export type AdminUserRow = {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "member";
+  role: Role;
   dailyTarget: number;
   monthlyTarget: number;
   isActive: boolean;

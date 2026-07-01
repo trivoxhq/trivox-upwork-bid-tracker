@@ -1,0 +1,34 @@
+import { NextResponse } from "next/server";
+import { getActiveActor } from "@/lib/auth/get-active-actor";
+import { parseExportFormat, spreadsheetDownloadResponse } from "@/lib/spreadsheet/download-response";
+import {
+  LEAD_EXPORT_HEADERS,
+  LEAD_EXPORT_INCLUDE,
+  buildLeadExportRows,
+  leadExportWhere,
+} from "@/lib/leads/spreadsheet";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(request: Request) {
+  try {
+    const format = parseExportFormat(new URL(request.url).searchParams.get("format"));
+    const actor = await getActiveActor();
+    if (!actor?.isActive) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const leads = await prisma.lead.findMany({
+      where: leadExportWhere(actor),
+      include: LEAD_EXPORT_INCLUDE,
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    });
+
+    const rows = buildLeadExportRows(leads);
+    return spreadsheetDownloadResponse(LEAD_EXPORT_HEADERS, rows, format, "leads-export", "Leads");
+  } catch {
+    return NextResponse.json(
+      { success: false, message: "Something went wrong. Please try again." },
+      { status: 500 },
+    );
+  }
+}

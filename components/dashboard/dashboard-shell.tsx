@@ -23,7 +23,9 @@ export type DashboardShellUser = {
   name: string;
   email: string;
   role: string;
+  roleLabel: string;
   isAdmin: boolean;
+  canWrite: boolean;
 };
 
 type DashboardShellProps = {
@@ -167,11 +169,13 @@ function SidebarNavLink({
 
 function SidebarQuickActions({
   isAdmin,
+  canWrite,
   collapsed,
   onDone,
   embedInAccordion,
 }: {
   isAdmin: boolean;
+  canWrite: boolean;
   collapsed: boolean;
   onDone?: () => void;
   /** Strip outer card — used inside sidebar Actions accordion panel. */
@@ -202,7 +206,7 @@ function SidebarQuickActions({
         </motion.button>
         <DashboardExportBidsButton format="xlsx" iconOnly />
         <DashboardExportBidsButton format="csv" iconOnly />
-        <DashboardAddBidTrigger iconOnly label="Add bid" />
+        {canWrite ? <DashboardAddBidTrigger iconOnly label="Add bid" /> : null}
         {isAdmin ? (
           <DashboardResetBidsButton iconOnly triggerClassName={`${DASH_BTN_DANGER_GHOST} border-danger/40 p-0`} />
         ) : null}
@@ -224,7 +228,9 @@ function SidebarQuickActions({
       </button>
       <DashboardExportBidsButton format="xlsx" buttonClassName={btn} />
       <DashboardExportBidsButton format="csv" buttonClassName={btn} />
-      <DashboardAddBidTrigger label="Add bid" className="min-h-[44px] w-full text-[13px] shadow-md shadow-brand-primary/15" />
+      {canWrite ? (
+        <DashboardAddBidTrigger label="Add bid" className="min-h-[44px] w-full text-[13px] shadow-md shadow-brand-primary/15" />
+      ) : null}
       {isAdmin ? (
         <DashboardResetBidsButton triggerClassName={`${DASH_BTN_DANGER_GHOST} w-full justify-center text-[13px]`} />
       ) : null}
@@ -251,7 +257,7 @@ function SidebarProfileHeader({
   onNavigate?: () => void;
 }) {
   const initials = initialsFromName(user.name);
-  const roleLabel = user.role === "admin" ? "Administrator" : "Member";
+  const roleLabel = user.roleLabel;
   const hideNameLine = nameMatchesInitialsOnly(user.name, initials);
   const avatarClass =
     "flex items-center justify-center rounded-md border border-border/60 bg-bg-secondary text-[11px] font-medium tabular-nums tracking-tight text-text-primary shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.65)] dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.08)]";
@@ -346,6 +352,8 @@ function SidebarScrollable({
   const clientsActive = pathname.startsWith("/dashboard/clients");
   const tasksActive = pathname.startsWith("/dashboard/tasks");
   const calendarActive = pathname.startsWith("/dashboard/calendar");
+  const dealsActive = pathname.startsWith("/dashboard/deals");
+  const reportsActive = pathname.startsWith("/dashboard/reports");
   const insightsActive = pathname.startsWith("/dashboard/insights");
   const usersActive = pathname.startsWith("/dashboard/users");
   const settingsActive = pathname.startsWith("/dashboard/settings");
@@ -362,6 +370,8 @@ function SidebarScrollable({
           !clientsActive &&
           !tasksActive &&
           !calendarActive &&
+          !dealsActive &&
+          !reportsActive &&
           !insightsActive &&
           !usersActive &&
           !settingsActive
@@ -441,6 +451,30 @@ function SidebarScrollable({
         }
       />
       <SidebarNavLink
+        href="/dashboard/deals"
+        active={dealsActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Deals"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
+        href="/dashboard/reports"
+        active={reportsActive}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        label="Reports"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M4 20V4M10 20V10M16 20V14M22 20V6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
+      <SidebarNavLink
         href="/dashboard/insights"
         active={insightsActive}
         collapsed={collapsed}
@@ -504,7 +538,7 @@ function SidebarScrollable({
         <div className="mt-4 flex min-h-0 flex-col items-center">
           <span className="mb-2 h-1 w-1 rounded-full bg-info/40" aria-hidden />
           <div className="mt-1 w-full">
-            <SidebarQuickActions isAdmin={user.isAdmin} collapsed onDone={onNavigate} />
+            <SidebarQuickActions isAdmin={user.isAdmin} canWrite={user.canWrite} collapsed onDone={onNavigate} />
           </div>
         </div>
       </div>
@@ -566,7 +600,7 @@ function SidebarScrollable({
             aria-labelledby="sidebar-trigger-actions"
             className="border-t border-border/35 px-2 pb-2.5 pt-2"
           >
-            <SidebarQuickActions isAdmin={user.isAdmin} collapsed={false} embedInAccordion onDone={onNavigate} />
+            <SidebarQuickActions isAdmin={user.isAdmin} canWrite={user.canWrite} collapsed={false} embedInAccordion onDone={onNavigate} />
           </div>
         ) : null}
       </div>
@@ -673,7 +707,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
               </svg>
             )}
           </button>
-          <div className="min-w-0 flex-1 text-right">
+        <div className="min-w-0 flex-1 text-right">
             {mobileHideName ? null : (
               <p className="truncate text-sm font-semibold tracking-tight text-text-primary">{user.name}</p>
             )}
@@ -681,9 +715,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
               {user.email}
             </p>
             <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.1em] text-text-secondary/75">
-              {user.role === "admin" ? "Administrator" : "Member"}
+              {user.roleLabel}
             </p>
-          </div>
+        </div>
         </header>
 
         <div

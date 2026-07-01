@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getRoleCapabilities } from "@/lib/auth/roles";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -8,13 +9,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
+  const caps = getRoleCapabilities(user.role);
+
   return (
     <DashboardShell
       user={{
         name: user.name,
         email: user.email,
         role: user.role,
-        isAdmin: user.role === "admin",
+        roleLabel: caps.label,
+        isAdmin: caps.canManageUsers,
+        canWrite: caps.canWrite,
       }}
     >
       {children}

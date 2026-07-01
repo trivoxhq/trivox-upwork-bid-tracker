@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 const WON_STATUS = "Won";
@@ -53,8 +54,7 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const users =
-      actor.role === "admin"
+    const users = canViewTeamWide(actor.role)
         ? await prisma.user.findMany({
             select: { id: true, name: true, dailyTarget: true, monthlyTarget: true },
             orderBy: { name: "asc" },

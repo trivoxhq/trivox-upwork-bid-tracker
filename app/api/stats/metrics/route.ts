@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { pctNumeratorOverTotal } from "@/lib/stats/pct";
 
 const RESPONSE_STATUSES = ["Responded", "Interview", "Won"] as const;
@@ -22,7 +23,7 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const where = actor.role === "admin" ? {} : { addedById: actor.id };
+    const where = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
 
     const [total, respondedInterviewWon, wonCount, wonSum] = await Promise.all([
       prisma.bid.count({ where }),

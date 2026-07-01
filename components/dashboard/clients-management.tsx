@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { Suspense, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +13,18 @@ import {
   DASH_TABLE_TH,
 } from "@/components/dashboard/dashboard-classes";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CrmImportExportToolbar } from "@/components/dashboard/crm-import-export-toolbar";
+import { CrmNotesPanel } from "@/components/dashboard/crm-notes-panel";
+import {
+  CrmAdvancedFiltersPanel,
+  CrmFilterCheckbox,
+  CrmFilterField,
+  CrmFilterToolbar,
+  CRM_FILTER_INPUT_CLASS,
+  CrmOwnerSelect,
+} from "@/components/dashboard/crm-advanced-filters";
+import { useCrmFilterParams } from "@/hooks/use-crm-filter-params";
+import { distinctSorted, matchTextSearch } from "@/lib/filters/helpers";
 import { CLIENT_HISTORY_TYPES } from "@/lib/clients/catalog";
 import type { ClientRow } from "@/lib/clients/types";
 import { LEAD_SOURCE_OPTIONS } from "@/lib/leads/catalog";
@@ -37,6 +49,9 @@ type HistoryFormState = {
 type ClientsManagementProps = {
   initialClients: ClientRow[];
   isAdmin: boolean;
+  readOnly?: boolean;
+  currentUserId: string;
+  canDeleteNotes?: boolean;
 };
 
 const emptyClientForm: ClientFormState = {
@@ -99,17 +114,51 @@ function compactClientPayload(form: ClientFormState) {
   return payload;
 }
 
-export function ClientsManagement({ initialClients, isAdmin }: ClientsManagementProps) {
+export function ClientsManagement(props: ClientsManagementProps) {
+  return (
+    <Suspense fallback={<p className="mt-8 text-sm text-text-secondary">Loading filters…</p>}>
+      <ClientsManagementInner {...props} />
+    </Suspense>
+  );
+}
+
+function ClientsManagementInner({
+  initialClients,
+  isAdmin,
+  readOnly = false,
+  currentUserId,
+  canDeleteNotes = false,
+}: ClientsManagementProps) {
   const router = useRouter();
+  const [notesFor, setNotesFor] = useState<{ id: string; title: string } | null>(null);
   const [form, setForm] = useState<ClientFormState>(emptyClientForm);
   const [historyForm, setHistoryForm] = useState<HistoryFormState>(emptyHistoryForm);
   const [editing, setEditing] = useState<ClientRow | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [historySubmitting, setHistorySubmitting] = useState(false);
-  const [search, setSearch] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
+
+  const filters = useCrmFilterParams({
+    stringKeys: ["q", "source", "country", "company", "createdBy"],
+    boolKeys: ["hasHistory"],
+  });
+
+  const search = filters.getString("q");
+  const sourceFilter = filters.getString("source");
+  const countryFilter = filters.getString("country");
+  const companyFilter = filters.getString("company");
+  const createdByFilter = filters.getString("createdBy");
+  const hasHistory = filters.getBool("hasHistory");
+
+  const creatorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const client of initialClients) {
+      map.set(client.createdBy.id, client.createdBy.name);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [initialClients]);
 
   const selectedClient = useMemo(
     () => initialClients.find((client) => client.id === selectedClientId) ?? initialClients[0] ?? null,
@@ -124,34 +173,48 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
     return Array.from(values).sort();
   }, [initialClients]);
 
-  const countryOptions = useMemo(() => {
-    const values = new Set<string>();
-    for (const client of initialClients) {
-      if (client.country) values.add(client.country);
-    }
-    return Array.from(values).sort();
-  }, [initialClients]);
+  const countryOptions = useMemo(
+    () => distinctSorted(initialClients.map((client) => client.country)),
+    [initialClients],
+  );
+
+  const companyOptions = useMemo(
+    () => distinctSorted(initialClients.map((client) => client.company)),
+    [initialClients],
+  );
 
   const filteredClients = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return initialClients.filter((client) => {
       if (sourceFilter && client.source !== sourceFilter) return false;
       if (countryFilter && client.country !== countryFilter) return false;
-      if (!q) return true;
-
-      return [
-        client.name,
-        client.email,
-        client.phone,
-        client.company,
-        client.country,
-        client.source,
-        client.notes,
-      ]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(q));
+      if (companyFilter && client.company !== companyFilter) return false;
+      if (createdByFilter && client.createdBy.id !== createdByFilter) return false;
+      if (hasHistory && client.history.length === 0) return false;
+      if (
+        !matchTextSearch(search, [
+          client.name,
+          client.email,
+          client.phone,
+          client.company,
+          client.country,
+          client.source,
+          client.notes,
+          client.createdBy.name,
+        ])
+      ) {
+        return false;
+      }
+      return true;
     });
-  }, [countryFilter, initialClients, search, sourceFilter]);
+  }, [
+    companyFilter,
+    countryFilter,
+    createdByFilter,
+    hasHistory,
+    initialClients,
+    search,
+    sourceFilter,
+  ]);
 
   function resetForm() {
     setEditing(null);
@@ -278,7 +341,8 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <div className={`grid gap-6 ${readOnly ? "" : "xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"}`}>
+      {!readOnly ? (
       <section className="rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -477,6 +541,7 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
           </form>
         ) : null}
       </section>
+      ) : null}
 
       <section className="min-w-0 rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -486,31 +551,29 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
               {filteredClients.length} / {initialClients.length} clients
             </p>
           </div>
-          <button
-            type="button"
-            className={DASH_BTN_TABLE}
-            onClick={() => {
-              setSearch("");
-              setSourceFilter("");
-              setCountryFilter("");
-            }}
-          >
-            Reset filters
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <CrmImportExportToolbar entity="clients" readOnly={readOnly} />
+            <CrmFilterToolbar
+              activeCount={filters.activeCount}
+              advancedOpen={filters.advancedOpen}
+              onToggleAdvanced={() => filters.setAdvancedOpen((open) => !open)}
+              onReset={filters.resetAll}
+            />
+          </div>
         </div>
 
         <div className={`${DASH_FILTER_BAR} mt-4`}>
-          <div className="grid gap-2 md:grid-cols-3">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             <input
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => filters.setString("q", e.target.value)}
               placeholder="Search clients..."
             />
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
+              onChange={(e) => filters.setString("source", e.target.value)}
             >
               <option value="">All sources</option>
               {sourceOptions.map((source) => (
@@ -520,9 +583,9 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
               ))}
             </select>
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
+              onChange={(e) => filters.setString("country", e.target.value)}
             >
               <option value="">All countries</option>
               {countryOptions.map((country) => (
@@ -531,7 +594,38 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
                 </option>
               ))}
             </select>
+            <select
+              className={CRM_FILTER_INPUT_CLASS}
+              value={companyFilter}
+              onChange={(e) => filters.setString("company", e.target.value)}
+            >
+              <option value="">All companies</option>
+              {companyOptions.map((company) => (
+                <option key={company} value={company}>
+                  {company}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <CrmAdvancedFiltersPanel open={filters.advancedOpen}>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <CrmFilterField label="Created by">
+                <CrmOwnerSelect
+                  value={createdByFilter}
+                  onChange={(value) => filters.setString("createdBy", value)}
+                  users={creatorOptions}
+                  includeUnassigned={false}
+                  placeholder="Anyone"
+                />
+              </CrmFilterField>
+              <CrmFilterCheckbox
+                label="Has history entries"
+                checked={hasHistory}
+                onChange={(checked) => filters.setBool("hasHistory", checked)}
+              />
+            </div>
+          </CrmAdvancedFiltersPanel>
         </div>
 
         {initialClients.length === 0 ? (
@@ -612,10 +706,19 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
                         <button
                           type="button"
                           className={DASH_BTN_TABLE}
+                          onClick={() => setNotesFor({ id: client.id, title: client.name })}
+                        >
+                          Notes
+                        </button>
+                        <button
+                          type="button"
+                          className={DASH_BTN_TABLE}
                           onClick={() => setSelectedClientId(client.id)}
                         >
                           History
                         </button>
+                        {!readOnly ? (
+                          <>
                         <button
                           type="button"
                           className={DASH_BTN_TABLE}
@@ -636,6 +739,8 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
                           >
                             Delete
                           </button>
+                        ) : null}
+                          </>
                         ) : null}
                       </div>
                     </td>
@@ -694,6 +799,19 @@ export function ClientsManagement({ initialClients, isAdmin }: ClientsManagement
           </div>
         ) : null}
       </section>
+
+      {notesFor ? (
+        <CrmNotesPanel
+          className="mt-6"
+          entityType="client"
+          entityId={notesFor.id}
+          entityTitle={notesFor.title}
+          readOnly={readOnly}
+          canDelete={canDeleteNotes}
+          currentUserId={currentUserId}
+          onClose={() => setNotesFor(null)}
+        />
+      ) : null}
     </div>
   );
 }

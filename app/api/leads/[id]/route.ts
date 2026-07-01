@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canAssign, canDelete, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidLeadStatus } from "@/lib/leads/catalog";
 import { LEAD_INCLUDE_USERS, mapLeadToRow } from "@/lib/leads/map-lead";
 import { prisma } from "@/lib/prisma";
@@ -81,10 +83,12 @@ export async function PUT(
     if (!existing) return jsonError(404, "Lead not found.");
 
     const canAccess =
-      actor.role === "admin" ||
+      canViewTeamWide(actor.role) ||
       existing.assignedToId === actor.id ||
       existing.createdById === actor.id;
     if (!canAccess) return jsonError(403, "You do not have access to this lead.");
+
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
 
     let body: Record<string, unknown>;
     try {
@@ -127,8 +131,8 @@ export async function PUT(
     }
 
     if ("assignedToId" in body) {
-      if (actor.role !== "admin") {
-        errors.assignedToId = "Only administrators can reassign leads.";
+      if (!canAssign(actor.role)) {
+        errors.assignedToId = "Only administrators and managers can reassign leads.";
       } else {
         const assignedToId = optionalNullableString(body.assignedToId, "assignedToId", errors);
         if (assignedToId === null) {
@@ -175,7 +179,7 @@ export async function DELETE(
 
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
-    if (actor.role !== "admin") return jsonError(403, "Only administrators can delete leads.");
+    if (!canDelete(actor.role)) return jsonError(403, "Only administrators and managers can delete leads.");
 
     await prisma.lead.delete({ where: { id } });
     return NextResponse.json({ success: true });

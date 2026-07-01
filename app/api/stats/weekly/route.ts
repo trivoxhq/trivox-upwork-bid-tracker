@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 const WON_STATUS = "Won";
@@ -54,7 +55,7 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const whereBase = actor.role === "admin" ? {} : { addedById: actor.id };
+    const whereBase = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
 
     const now = new Date();
     const todayStart = utcMidnight(now);

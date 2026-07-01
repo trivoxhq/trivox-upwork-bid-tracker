@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 const WON_STATUS = "Won";
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
     const rangeStart = utcMonthBounds(fy!, fm! - 1).start;
     const rangeEnd = utcMonthBounds(ly!, lm! - 1).end;
 
-    const whereBase = actor.role === "admin" ? {} : { addedById: actor.id };
+    const whereBase = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
 
     const rows = await prisma.bid.findMany({
       where: {

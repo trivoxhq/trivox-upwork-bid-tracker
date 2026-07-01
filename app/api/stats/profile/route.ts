@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 import { pctNumeratorOverTotal } from "@/lib/stats/pct";
 
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
       if (url.searchParams.get("to")) dateFilter.lte = toParsed.date;
     }
 
-    const scope = actor.role === "admin" ? {} : { addedById: actor.id };
+    const scope = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
     const where = dateFilter ? { ...scope, date: dateFilter } : scope;
 
     const [totals, wonRows, respondedRows] = await Promise.all([

@@ -10,6 +10,7 @@ import {
   DASH_TRANSITION,
 } from "@/components/dashboard/dashboard-classes";
 import type { AdminUserRow } from "@/components/dashboard/users-admin-types";
+import { ASSIGNABLE_ROLES, isValidRole, roleLabel } from "@/lib/auth/roles";
 import Button from "@/components/ui/button";
 import { modalAnimation } from "@/components/ui/motion";
 import toast from "react-hot-toast";
@@ -29,7 +30,8 @@ function isAdminUserRow(value: unknown): value is AdminUserRow {
     typeof o.id === "string" &&
     typeof o.email === "string" &&
     typeof o.name === "string" &&
-    (o.role === "admin" || o.role === "member") &&
+    typeof o.role === "string" &&
+    isValidRole(o.role) &&
     typeof o.dailyTarget === "number" &&
     typeof o.monthlyTarget === "number" &&
     typeof o.isActive === "boolean" &&
@@ -57,6 +59,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
   const [savingTargets, setSavingTargets] = useState(false);
 
   const [busyActiveId, setBusyActiveId] = useState<string | null>(null);
+  const [busyRoleId, setBusyRoleId] = useState<string | null>(null);
 
   const [passwordFor, setPasswordFor] = useState<AdminUserRow | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -68,7 +71,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
   const [addName, setAddName] = useState("");
   const [addEmail, setAddEmail] = useState("");
   const [addPassword, setAddPassword] = useState("");
-  const [addRole, setAddRole] = useState<"admin" | "member">("member");
+  const [addRole, setAddRole] = useState<AdminUserRow["role"]>("sales_member");
   const [addFieldErrors, setAddFieldErrors] = useState<Record<string, string>>({});
   const [addFormError, setAddFormError] = useState<string | null>(null);
   const [savingAdd, setSavingAdd] = useState(false);
@@ -140,7 +143,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
     setAddName("");
     setAddEmail("");
     setAddPassword("");
-    setAddRole("member");
+    setAddRole("sales_member");
     setAddFieldErrors({});
     setAddFormError(null);
     setAddOpen(true);
@@ -197,7 +200,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
       setAddName("");
       setAddEmail("");
       setAddPassword("");
-      setAddRole("member");
+      setAddRole("sales_member");
       await loadUsers();
     } catch {
       setAddFormError("Network error.");
@@ -354,6 +357,45 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
     }
   }
 
+  async function patchRole(user: AdminUserRow, nextRole: AdminUserRow["role"]) {
+    if (user.role === nextRole) return;
+    if (user.id === currentUserId) return;
+
+    setBusyRoleId(user.id);
+    try {
+      const res = await fetch(`/api/users/${user.id}/role`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: nextRole }),
+      });
+
+      const data = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        user?: unknown;
+        message?: string;
+      } | null;
+
+      if (!res.ok) {
+        window.alert(data?.message ?? "Could not update role.");
+        return;
+      }
+
+      if (!data?.user || !isAdminUserRow(data.user)) {
+        window.alert("Invalid response.");
+        return;
+      }
+
+      const updated = data.user;
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      toast.success(`${updated.name} is now ${roleLabel(updated.role)}.`);
+    } catch {
+      window.alert("Network error.");
+    } finally {
+      setBusyRoleId(null);
+    }
+  }
+
   useEffect(() => {
     if (!editing) return;
     function onKey(e: KeyboardEvent) {
@@ -431,7 +473,30 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                 <td className="max-w-[220px] truncate px-4 py-3 text-text-secondary" title={user.email}>
                   {user.email}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 capitalize text-text-primary">{user.role}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-text-primary">
+                  {user.id === currentUserId ? (
+                    roleLabel(user.role)
+                  ) : (
+                    <select
+                      className="min-w-[9.5rem] rounded-lg border border-input-border bg-bg-primary px-2 py-1.5 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
+                      value={user.role}
+                      disabled={busyRoleId === user.id}
+                      aria-busy={busyRoleId === user.id}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        if (isValidRole(next)) {
+                          void patchRole(user, next);
+                        }
+                      }}
+                    >
+                      {ASSIGNABLE_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {roleLabel(role)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </td>
                 <td className="whitespace-nowrap px-4 py-3 tabular-nums text-text-primary">
                   <span className="text-text-secondary">D</span> {formatMoney(user.dailyTarget)}
                   <span className="mx-1.5 text-border">·</span>
@@ -761,11 +826,17 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                     id="add-member-role"
                     className={inputClass}
                     value={addRole}
-                    onChange={(e) => setAddRole(e.target.value === "admin" ? "admin" : "member")}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (isValidRole(value)) setAddRole(value);
+                    }}
                     disabled={savingAdd}
                   >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    {ASSIGNABLE_ROLES.map((role) => (
+                      <option key={role} value={role}>
+                        {roleLabel(role)}
+                      </option>
+                    ))}
                   </select>
                   {addFieldErrors.role ? (
                     <p className="mt-1 text-sm text-danger" role="alert">

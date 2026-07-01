@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canWrite } from "@/lib/auth/roles";
 import { CLIENT_INCLUDE_HISTORY, mapClientToRow } from "@/lib/clients/map-client";
 import { prisma } from "@/lib/prisma";
 
@@ -68,6 +70,8 @@ export async function POST(request: Request) {
   try {
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
+
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
 
     let body: CreateClientBody;
     try {

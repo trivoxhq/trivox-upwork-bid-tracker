@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canAssign, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidLeadStatus } from "@/lib/leads/catalog";
 import { LEAD_INCLUDE_USERS, mapLeadToRow } from "@/lib/leads/map-lead";
 import { prisma } from "@/lib/prisma";
@@ -72,8 +74,7 @@ export async function GET() {
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
 
     const leads = await prisma.lead.findMany({
-      where:
-        actor.role === "admin"
+      where: canViewTeamWide(actor.role)
           ? undefined
           : {
               OR: [{ assignedToId: actor.id }, { createdById: actor.id }],
@@ -92,6 +93,8 @@ export async function POST(request: Request) {
   try {
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
+
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
 
     let body: CreateLeadBody;
     try {
@@ -112,7 +115,7 @@ export async function POST(request: Request) {
     const notes = optionalString(body.notes, "notes", errors);
 
     let assignedToId: string | null = null;
-    if (actor.role === "admin") {
+    if (canAssign(actor.role)) {
       assignedToId = optionalString(body.assignedToId, "assignedToId", errors);
       if (assignedToId) {
         const assignee = await prisma.user.findFirst({

@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canAssign, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidTaskPriority, isValidTaskStatus } from "@/lib/tasks/catalog";
 import { TASK_INCLUDE_USERS, mapTaskToRow } from "@/lib/tasks/map-task";
 import { prisma } from "@/lib/prisma";
@@ -69,8 +70,7 @@ export async function GET() {
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
 
     const tasks = await prisma.crmTask.findMany({
-      where:
-        actor.role === "admin"
+      where: canViewTeamWide(actor.role)
           ? undefined
           : {
               OR: [{ assignedToId: actor.id }, { createdById: actor.id }],
@@ -89,6 +89,8 @@ export async function POST(request: Request) {
   try {
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
+
+    if (!canWrite(actor.role)) return jsonError(403, "Read-only access.");
 
     let body: CreateTaskBody;
     try {
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
     }
 
     let assignedToId = actor.id;
-    if (actor.role === "admin") {
+    if (canAssign(actor.role)) {
       const parsedAssignee = optionalString(body.assignedToId, "assignedToId", errors);
       assignedToId = parsedAssignee ?? actor.id;
     }

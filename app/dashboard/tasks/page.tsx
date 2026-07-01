@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { TasksManagement } from "@/components/dashboard/tasks-management";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCrmPagePermissions } from "@/lib/auth/page-permissions";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { TASK_INCLUDE_USERS, mapTaskToRow } from "@/lib/tasks/map-task";
 import { prisma } from "@/lib/prisma";
 
@@ -20,10 +22,11 @@ export default async function DashboardTasksPage() {
     redirect("/login");
   }
 
+  const perms = getCrmPagePermissions(actor.role);
+
   const [tasksRaw, usersRaw] = await Promise.all([
     prisma.crmTask.findMany({
-      where:
-        actor.role === "admin"
+      where: canViewTeamWide(actor.role)
           ? undefined
           : {
               OR: [{ assignedToId: actor.id }, { createdById: actor.id }],
@@ -54,8 +57,10 @@ export default async function DashboardTasksPage() {
         <TasksManagement
           initialTasks={tasksRaw.map(mapTaskToRow)}
           users={usersRaw}
-          isAdmin={actor.role === "admin"}
+          isAdmin={perms.canAssign}
+          readOnly={perms.readOnly}
           currentUserId={actor.id}
+          canDeleteNotes={perms.canDelete}
         />
       </div>
     </div>

@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { UsersAdminTable } from "@/components/dashboard/users-admin-table";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canManageUsers } from "@/lib/auth/roles";
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
   }
-  if (user.role !== "admin") {
+  if (!canManageUsers(user.role)) {
     redirect("/dashboard");
   }
 

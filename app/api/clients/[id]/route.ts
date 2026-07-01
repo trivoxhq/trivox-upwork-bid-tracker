@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canDelete, canWrite } from "@/lib/auth/roles";
 import { CLIENT_INCLUDE_HISTORY, mapClientToRow } from "@/lib/clients/map-client";
 import { prisma } from "@/lib/prisma";
 
@@ -70,6 +72,8 @@ export async function PUT(
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
 
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
+
     let body: Record<string, unknown>;
     try {
       body = (await request.json()) as Record<string, unknown>;
@@ -126,7 +130,7 @@ export async function DELETE(
 
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
-    if (actor.role !== "admin") return jsonError(403, "Only administrators can delete clients.");
+    if (!canDelete(actor.role)) return jsonError(403, "Only administrators and managers can delete clients.");
 
     await prisma.client.delete({ where: { id } });
     return NextResponse.json({ success: true });

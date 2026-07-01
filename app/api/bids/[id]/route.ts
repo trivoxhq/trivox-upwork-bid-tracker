@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { BID_STATUS_LABELS, isValidBidStatus } from "@/lib/bids/catalog";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canEditAnyBid, canDelete } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_UPDATABLE_KEYS = new Set([
@@ -201,8 +202,8 @@ export async function PUT(
       return jsonError(404, "Bid not found.");
     }
 
-    if (actor.role !== "admin") {
-      return jsonError(403, "Only administrators can edit bids.");
+    if (!canEditAnyBid(actor.role)) {
+      return jsonError(403, "Only administrators and managers can edit bids.");
     }
 
     let body: Record<string, unknown>;
@@ -271,8 +272,8 @@ export async function DELETE(
       return jsonError(401, "Unauthorized.");
     }
 
-    if (actor.role !== "admin") {
-      return jsonError(403, "Only administrators can delete bids.");
+    if (!canDelete(actor.role)) {
+      return jsonError(403, "Only administrators and managers can delete bids.");
     }
 
     await prisma.bid.delete({ where: { id } });

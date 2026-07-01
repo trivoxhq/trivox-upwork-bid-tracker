@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canAssign, canDelete, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidCalendarEventType } from "@/lib/calendar/catalog";
 import {
   CALENDAR_EVENT_INCLUDE_USERS,
@@ -109,10 +111,12 @@ export async function PUT(
     if (!existing) return jsonError(404, "Calendar event not found.");
 
     const canAccess =
-      actor.role === "admin" ||
+      canViewTeamWide(actor.role) ||
       existing.ownerId === actor.id ||
       existing.createdById === actor.id;
     if (!canAccess) return jsonError(403, "You do not have access to this event.");
+
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
 
     let body: Record<string, unknown>;
     try {
@@ -162,8 +166,8 @@ export async function PUT(
     }
 
     if ("ownerId" in body) {
-      if (actor.role !== "admin") {
-        errors.ownerId = "Only administrators can reassign events.";
+      if (!canAssign(actor.role)) {
+        errors.ownerId = "Only administrators and managers can reassign events.";
       } else {
         const ownerId = optionalNullableString(body.ownerId, "ownerId", errors);
         if (ownerId === null) {
@@ -210,7 +214,7 @@ export async function DELETE(
 
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
-    if (actor.role !== "admin") return jsonError(403, "Only administrators can delete events.");
+    if (!canDelete(actor.role)) return jsonError(403, "Only administrators and managers can delete events.");
 
     await prisma.calendarEvent.delete({ where: { id } });
     return NextResponse.json({ success: true });

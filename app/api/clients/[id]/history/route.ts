@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canWrite } from "@/lib/auth/roles";
 import { isValidClientHistoryType } from "@/lib/clients/catalog";
 import { mapClientHistoryToRow } from "@/lib/clients/map-client";
 import { prisma } from "@/lib/prisma";
@@ -25,7 +27,7 @@ async function getActiveActor() {
 
   return prisma.user.findUnique({
     where: { id: session.sub },
-    select: { id: true, isActive: true },
+    select: { id: true, isActive: true, role: true },
   });
 }
 
@@ -71,6 +73,7 @@ export async function POST(
 
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
 
     const client = await prisma.client.findUnique({
       where: { id },

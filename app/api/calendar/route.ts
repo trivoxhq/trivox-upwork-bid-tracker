@@ -1,6 +1,8 @@
 import { Prisma } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canAssign, canViewTeamWide, canWrite } from "@/lib/auth/roles";
 import { isValidCalendarEventType } from "@/lib/calendar/catalog";
 import {
   CALENDAR_EVENT_INCLUDE_USERS,
@@ -94,7 +96,7 @@ export async function GET(request: Request) {
 
     const events = await prisma.calendarEvent.findMany({
       where: {
-        ...(actor.role === "admin"
+        ...(canViewTeamWide(actor.role)
           ? {}
           : {
               OR: [{ ownerId: actor.id }, { createdById: actor.id }],
@@ -123,6 +125,8 @@ export async function POST(request: Request) {
     const actor = await getActiveActor();
     if (!actor?.isActive) return jsonError(401, "Unauthorized.");
 
+    if (!canWrite(actor.role)) return readOnlyForbiddenResponse();
+
     let body: CreateCalendarEventBody;
     try {
       body = (await request.json()) as CreateCalendarEventBody;
@@ -145,7 +149,7 @@ export async function POST(request: Request) {
     }
 
     let ownerId = actor.id;
-    if (actor.role === "admin") {
+    if (canAssign(actor.role)) {
       ownerId = optionalString(body.ownerId, "ownerId", errors) ?? actor.id;
     }
 

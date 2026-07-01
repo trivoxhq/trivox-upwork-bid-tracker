@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { Suspense, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
@@ -11,6 +11,16 @@ import {
   DASH_SECTION_TITLE,
 } from "@/components/dashboard/dashboard-classes";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  CrmAdvancedFiltersPanel,
+  CrmFilterCheckbox,
+  CrmFilterField,
+  CrmFilterToolbar,
+  CRM_FILTER_INPUT_CLASS,
+  CrmOwnerSelect,
+} from "@/components/dashboard/crm-advanced-filters";
+import { useCrmFilterParams } from "@/hooks/use-crm-filter-params";
+import { matchDateRange, matchOwnerFilter, matchTextSearch } from "@/lib/filters/helpers";
 import { CALENDAR_EVENT_TYPES } from "@/lib/calendar/catalog";
 import type { CalendarEventRow, CalendarUserSummary } from "@/lib/calendar/types";
 
@@ -27,6 +37,7 @@ type CalendarManagementProps = {
   initialEvents: CalendarEventRow[];
   users: CalendarUserSummary[];
   isAdmin: boolean;
+  readOnly?: boolean;
   currentUserId: string;
 };
 
@@ -128,10 +139,27 @@ function EventTypePill({ type }: { type: string }) {
   );
 }
 
-export function CalendarManagement({
+function isUpcomingEvent(startsAt: string): boolean {
+  return new Date(startsAt).getTime() >= Date.now();
+}
+
+function isPastEvent(startsAt: string): boolean {
+  return new Date(startsAt).getTime() < Date.now();
+}
+
+export function CalendarManagement(props: CalendarManagementProps) {
+  return (
+    <Suspense fallback={<p className="mt-8 text-sm text-text-secondary">Loading filters…</p>}>
+      <CalendarManagementInner {...props} />
+    </Suspense>
+  );
+}
+
+function CalendarManagementInner({
   initialEvents,
   users,
   isAdmin,
+  readOnly = false,
   currentUserId,
 }: CalendarManagementProps) {
   const router = useRouter();
@@ -142,27 +170,55 @@ export function CalendarManagement({
   const [editing, setEditing] = useState<CalendarEventRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
-  const [typeFilter, setTypeFilter] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
-  const [search, setSearch] = useState("");
+
+  const filters = useCrmFilterParams({
+    stringKeys: ["q", "type", "owner", "dateFrom", "dateTo", "createdBy"],
+    boolKeys: ["upcomingOnly", "pastOnly"],
+  });
+
+  const search = filters.getString("q");
+  const typeFilter = filters.getString("type");
+  const ownerFilter = filters.getString("owner");
+  const dateFrom = filters.getString("dateFrom");
+  const dateTo = filters.getString("dateTo");
+  const createdByFilter = filters.getString("createdBy");
+  const upcomingOnly = filters.getBool("upcomingOnly");
+  const pastOnly = filters.getBool("pastOnly");
 
   const monthDays = useMemo(() => buildMonthDays(currentMonth), [currentMonth]);
   const currentMonthKey = monthKey(currentMonth);
 
   const filteredEvents = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return initialEvents.filter((event) => {
       if (typeFilter && event.type !== typeFilter) return false;
-      if (ownerFilter === "__unassigned__" && event.ownerId !== null) return false;
-      if (ownerFilter && ownerFilter !== "__unassigned__" && event.ownerId !== ownerFilter) {
+      if (!matchOwnerFilter(event.ownerId, ownerFilter)) return false;
+      if (createdByFilter && event.createdBy.id !== createdByFilter) return false;
+      if (!matchDateRange(event.startsAt, dateFrom, dateTo)) return false;
+      if (upcomingOnly && !isUpcomingEvent(event.startsAt)) return false;
+      if (pastOnly && !isPastEvent(event.startsAt)) return false;
+      if (
+        !matchTextSearch(search, [
+          event.title,
+          event.description,
+          event.owner?.name,
+          event.createdBy.name,
+        ])
+      ) {
         return false;
       }
-      if (!q) return true;
-      return [event.title, event.description, event.owner?.name, event.createdBy.name]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(q));
+      return true;
     });
-  }, [initialEvents, ownerFilter, search, typeFilter]);
+  }, [
+    createdByFilter,
+    dateFrom,
+    dateTo,
+    initialEvents,
+    ownerFilter,
+    pastOnly,
+    search,
+    typeFilter,
+    upcomingOnly,
+  ]);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEventRow[]>();
@@ -265,7 +321,8 @@ export function CalendarManagement({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <div className={`grid gap-6 ${readOnly ? "" : "xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"}`}>
+      {!readOnly ? (
       <section className="rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -379,6 +436,7 @@ export function CalendarManagement({
           </button>
         </form>
       </section>
+      ) : null}
 
       <section className="min-w-0 rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -407,17 +465,25 @@ export function CalendarManagement({
         </div>
 
         <div className={`${DASH_FILTER_BAR} mt-4`}>
-          <div className="grid gap-2 md:grid-cols-4">
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+            <CrmFilterToolbar
+              activeCount={filters.activeCount}
+              advancedOpen={filters.advancedOpen}
+              onToggleAdvanced={() => filters.setAdvancedOpen((open) => !open)}
+              onReset={filters.resetAll}
+            />
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             <input
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => filters.setString("q", e.target.value)}
               placeholder="Search events..."
             />
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => filters.setString("type", e.target.value)}
             >
               <option value="">All types</option>
               {CALENDAR_EVENT_TYPES.map((type) => (
@@ -427,32 +493,61 @@ export function CalendarManagement({
               ))}
             </select>
             {isAdmin ? (
-              <select
-                className={inputClass}
+              <CrmOwnerSelect
                 value={ownerFilter}
-                onChange={(e) => setOwnerFilter(e.target.value)}
-              >
-                <option value="">All owners</option>
-                <option value="__unassigned__">Unassigned</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => filters.setString("owner", value)}
+                users={users}
+              />
             ) : null}
-            <button
-              type="button"
-              className={DASH_BTN_TABLE}
-              onClick={() => {
-                setSearch("");
-                setTypeFilter("");
-                setOwnerFilter("");
+            <CrmFilterCheckbox
+              label="Upcoming only"
+              checked={upcomingOnly}
+              onChange={(checked) => {
+                filters.setBool("upcomingOnly", checked);
+                if (checked) filters.setBool("pastOnly", false);
               }}
-            >
-              Reset filters
-            </button>
+            />
           </div>
+
+          <CrmAdvancedFiltersPanel open={filters.advancedOpen}>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <CrmFilterField label="Start date from">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => filters.setString("dateFrom", e.target.value)}
+                  className={CRM_FILTER_INPUT_CLASS}
+                />
+              </CrmFilterField>
+              <CrmFilterField label="Start date to">
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => filters.setString("dateTo", e.target.value)}
+                  className={CRM_FILTER_INPUT_CLASS}
+                />
+              </CrmFilterField>
+              {isAdmin ? (
+                <CrmFilterField label="Created by">
+                  <CrmOwnerSelect
+                    value={createdByFilter}
+                    onChange={(value) => filters.setString("createdBy", value)}
+                    users={users}
+                    includeUnassigned={false}
+                    placeholder="Anyone"
+                  />
+                </CrmFilterField>
+              ) : null}
+              <CrmFilterCheckbox
+                label="Past events only"
+                checked={pastOnly}
+                onChange={(checked) => {
+                  filters.setBool("pastOnly", checked);
+                  if (checked) filters.setBool("upcomingOnly", false);
+                }}
+              />
+            </div>
+          </CrmAdvancedFiltersPanel>
         </div>
 
         <div className="mt-4 grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-border/70 bg-border/70 text-xs">
@@ -476,21 +571,31 @@ export function CalendarManagement({
               >
                 <div className="font-semibold text-text-primary">{day.getDate()}</div>
                 <div className="mt-1 space-y-1">
-                  {dayEvents.slice(0, 3).map((event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onClick={() => {
-                        setEditing(event);
-                        setForm(eventToForm(event));
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      className="block w-full truncate rounded-md bg-brand-primary/10 px-2 py-1 text-left text-[11px] font-semibold text-brand-primary hover:bg-brand-primary/15"
-                      title={event.title}
-                    >
-                      {event.title}
-                    </button>
-                  ))}
+                  {dayEvents.slice(0, 3).map((event) =>
+                    readOnly ? (
+                      <span
+                        key={event.id}
+                        className="block w-full truncate rounded-md bg-brand-primary/10 px-2 py-1 text-left text-[11px] font-semibold text-brand-primary"
+                        title={event.title}
+                      >
+                        {event.title}
+                      </span>
+                    ) : (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => {
+                          setEditing(event);
+                          setForm(eventToForm(event));
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        className="block w-full truncate rounded-md bg-brand-primary/10 px-2 py-1 text-left text-[11px] font-semibold text-brand-primary hover:bg-brand-primary/15"
+                        title={event.title}
+                      >
+                        {event.title}
+                      </button>
+                    ),
+                  )}
                   {dayEvents.length > 3 ? (
                     <div className="text-[11px] text-text-secondary">+{dayEvents.length - 3} more</div>
                   ) : null}
@@ -533,6 +638,8 @@ export function CalendarManagement({
                       ) : null}
                     </div>
                     <div className="flex gap-2">
+                      {!readOnly ? (
+                        <>
                       <button
                         type="button"
                         className={DASH_BTN_TABLE}
@@ -552,6 +659,8 @@ export function CalendarManagement({
                         >
                           Delete
                         </button>
+                      ) : null}
+                        </>
                       ) : null}
                     </div>
                   </div>

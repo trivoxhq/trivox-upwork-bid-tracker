@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import type { Role } from "@/generated/prisma-client";
+import { isValidRole } from "@/lib/auth/roles";
 
 export type AuthJwtPayload = {
   sub: string;
@@ -43,7 +44,8 @@ export function verifyAuthToken(token: string): AuthJwtPayload {
     typeof decoded.sub !== "string" ||
     typeof decoded.email !== "string" ||
     typeof decoded.name !== "string" ||
-    (decoded.role !== "admin" && decoded.role !== "member")
+    typeof decoded.role !== "string" ||
+    !isValidRole(decoded.role)
   ) {
     throw new Error("Invalid token payload");
   }
@@ -52,6 +54,6 @@ export function verifyAuthToken(token: string): AuthJwtPayload {
     sub: decoded.sub,
     email: decoded.email,
     name: decoded.name,
-    role: decoded.role,
+    role: decoded.role as Role,
   };
 }

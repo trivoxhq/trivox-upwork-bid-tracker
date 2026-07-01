@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { listBidsForActor } from "@/lib/bids/list-bids-for-actor";
 import { requireAdminApi } from "@/lib/auth/require-admin-api";
 import { getCurrentUser } from "@/lib/auth/session";
+import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
+import { canWrite } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -125,11 +127,14 @@ export async function POST(request: Request) {
 
     const actor = await prisma.user.findUnique({
       where: { id: session.sub },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, role: true },
     });
 
     if (!actor?.isActive) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+    if (!canWrite(actor.role)) {
+      return readOnlyForbiddenResponse();
     }
 
     const [profile, niche] = await Promise.all([

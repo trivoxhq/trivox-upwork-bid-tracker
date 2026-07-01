@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { InsightsHub } from "@/components/dashboard/insights-hub";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCrmPagePermissions } from "@/lib/auth/page-permissions";
 
 export default async function DashboardInsightsPage() {
   const user = await getCurrentUser();
@@ -9,7 +10,7 @@ export default async function DashboardInsightsPage() {
     redirect("/login");
   }
 
-  const isAdmin = user.role === "admin";
+  const perms = getCrmPagePermissions(user.role);
 
   return (
     <div className="flex min-w-0 flex-col">
@@ -23,7 +24,7 @@ export default async function DashboardInsightsPage() {
         ]}
       />
 
-      <InsightsHub isAdmin={isAdmin} />
+      <InsightsHub isAdmin={perms.canViewTeamStats} />
     </div>
   );
 }

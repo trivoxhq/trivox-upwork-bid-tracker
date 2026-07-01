@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ClientsManagement } from "@/components/dashboard/clients-management";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCrmPagePermissions } from "@/lib/auth/page-permissions";
 import { CLIENT_INCLUDE_HISTORY, mapClientToRow } from "@/lib/clients/map-client";
 import { prisma } from "@/lib/prisma";
 
@@ -19,6 +20,8 @@ export default async function DashboardClientsPage() {
   if (!actor?.isActive) {
     redirect("/login");
   }
+
+  const perms = getCrmPagePermissions(actor.role);
 
   const clients = await prisma.client.findMany({
     include: CLIENT_INCLUDE_HISTORY,
@@ -40,7 +43,10 @@ export default async function DashboardClientsPage() {
       <div className="mt-8">
         <ClientsManagement
           initialClients={clients.map(mapClientToRow)}
-          isAdmin={actor.role === "admin"}
+          isAdmin={perms.canAssign}
+          readOnly={perms.readOnly}
+          currentUserId={actor.id}
+          canDeleteNotes={perms.canDelete}
         />
       </div>
     </div>

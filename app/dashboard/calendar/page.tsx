@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { CalendarManagement } from "@/components/dashboard/calendar-management";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCrmPagePermissions } from "@/lib/auth/page-permissions";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import {
   CALENDAR_EVENT_INCLUDE_USERS,
   mapCalendarEventToRow,
@@ -23,10 +25,11 @@ export default async function DashboardCalendarPage() {
     redirect("/login");
   }
 
+  const perms = getCrmPagePermissions(actor.role);
+
   const [eventsRaw, usersRaw] = await Promise.all([
     prisma.calendarEvent.findMany({
-      where:
-        actor.role === "admin"
+      where: canViewTeamWide(actor.role)
           ? undefined
           : {
               OR: [{ ownerId: actor.id }, { createdById: actor.id }],
@@ -57,7 +60,8 @@ export default async function DashboardCalendarPage() {
         <CalendarManagement
           initialEvents={eventsRaw.map(mapCalendarEventToRow)}
           users={usersRaw}
-          isAdmin={actor.role === "admin"}
+          isAdmin={perms.canAssign}
+          readOnly={perms.readOnly}
           currentUserId={actor.id}
         />
       </div>

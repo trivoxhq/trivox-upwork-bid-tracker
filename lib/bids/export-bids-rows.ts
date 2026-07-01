@@ -1,15 +1,27 @@
 /** Rows for bids CSV / Excel export — shared formatting. */
 
-export const BID_EXPORT_HEADERS = ["Date", "Profile", "Client", "Niche", "Status", "Value", "Notes"] as const;
+export const BID_EXPORT_HEADERS = [
+  "Date",
+  "Profile",
+  "Client",
+  "Niche",
+  "Status",
+  "Value",
+  "Bid Link",
+  "Notes",
+  "Added By",
+] as const;
 
 export type BidExportSource = {
   date: Date;
   client: string;
+  bidLink: string | null;
   status: string;
   value: { toString(): string } | string | number;
   notes: string | null;
   profile: { name: string };
   niche: { name: string };
+  addedBy: { name: string };
 };
 
 /** Title-case each whitespace-delimited word on one line (spreadsheet-friendly). */
@@ -37,6 +49,8 @@ export function buildBidExportRows(bids: BidExportSource[]): string[][] {
     capitalizeCsvField(bid.niche.name),
     capitalizeCsvField(bid.status),
     String(bid.value),
+    capitalizeCsvField(bid.bidLink ?? ""),
     capitalizeCsvField(bid.notes ?? ""),
+    capitalizeCsvField(bid.addedBy.name),
   ]);
 }

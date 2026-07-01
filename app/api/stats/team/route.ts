@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminApi } from "@/lib/auth/require-admin-api";
+import { requireTeamStatsApi } from "@/lib/auth/require-team-stats-api";
 
 const WON_STATUS = "Won";
 
@@ -11,7 +11,7 @@ function pctRate(numerator: number, denominator: number): number {
 
 export async function GET() {
   try {
-    const gate = await requireAdminApi();
+    const gate = await requireTeamStatsApi();
     if (!gate.ok) return gate.response;
 
     const users = await prisma.user.findMany({

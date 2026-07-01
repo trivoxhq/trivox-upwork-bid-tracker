@@ -1,6 +1,7 @@
 import { Prisma, Role } from "@/generated/prisma-client";
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/auth/require-admin-api";
+import { ASSIGNABLE_ROLES, isValidRole } from "@/lib/auth/roles";
 import { hashPassword } from "@/lib/auth/password";
 import { isAllowedEmailDomain } from "@/lib/auth/validation";
 import { prisma } from "@/lib/prisma";
@@ -10,12 +11,15 @@ const MIN_PASSWORD_LEN = 8;
 
 function resolveRole(value: unknown): { role: Role; error?: string } {
   if (value === undefined || value === null || value === "") {
-    return { role: Role.member };
+    return { role: Role.sales_member };
   }
-  if (value === "admin" || value === "member") {
+  if (typeof value === "string" && isValidRole(value)) {
     return { role: value };
   }
-  return { role: Role.member, error: "Role must be admin or member." };
+  return {
+    role: Role.sales_member,
+    error: `Role must be one of: ${ASSIGNABLE_ROLES.join(", ")}.`,
+  };
 }
 
 export async function GET() {

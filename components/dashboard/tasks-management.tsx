@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { Suspense, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +13,18 @@ import {
   DASH_TABLE_TH,
 } from "@/components/dashboard/dashboard-classes";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CrmImportExportToolbar } from "@/components/dashboard/crm-import-export-toolbar";
+import { CrmNotesPanel } from "@/components/dashboard/crm-notes-panel";
+import {
+  CrmAdvancedFiltersPanel,
+  CrmFilterCheckbox,
+  CrmFilterField,
+  CrmFilterToolbar,
+  CRM_FILTER_INPUT_CLASS,
+  CrmOwnerSelect,
+} from "@/components/dashboard/crm-advanced-filters";
+import { useCrmFilterParams } from "@/hooks/use-crm-filter-params";
+import { matchDateRange, matchOwnerFilter, matchTextSearch } from "@/lib/filters/helpers";
 import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from "@/lib/tasks/catalog";
 import type { TaskRow, TaskUserSummary } from "@/lib/tasks/types";
 
@@ -29,7 +41,9 @@ type TasksManagementProps = {
   initialTasks: TaskRow[];
   users: TaskUserSummary[];
   isAdmin: boolean;
+  readOnly?: boolean;
   currentUserId: string;
+  canDeleteNotes?: boolean;
 };
 
 const emptyForm: TaskFormState = {
@@ -116,42 +130,82 @@ function compactPayload(form: TaskFormState, isAdmin: boolean) {
   return payload;
 }
 
-export function TasksManagement({
+export function TasksManagement(props: TasksManagementProps) {
+  return (
+    <Suspense fallback={<p className="mt-8 text-sm text-text-secondary">Loading filters…</p>}>
+      <TasksManagementInner {...props} />
+    </Suspense>
+  );
+}
+
+function TasksManagementInner({
   initialTasks,
   users,
   isAdmin,
+  readOnly = false,
   currentUserId,
+  canDeleteNotes = false,
 }: TasksManagementProps) {
   const router = useRouter();
+  const [notesFor, setNotesFor] = useState<{ id: string; title: string } | null>(null);
   const [form, setForm] = useState<TaskFormState>(() => ({
     ...emptyForm,
     assignedToId: isAdmin ? currentUserId : currentUserId,
   }));
   const [editing, setEditing] = useState<TaskRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
-  const [overdueOnly, setOverdueOnly] = useState(false);
+
+  const filters = useCrmFilterParams({
+    stringKeys: ["q", "status", "priority", "owner", "dueFrom", "dueTo", "createdBy"],
+    boolKeys: ["overdueOnly", "noDueDate"],
+  });
+
+  const search = filters.getString("q");
+  const statusFilter = filters.getString("status");
+  const priorityFilter = filters.getString("priority");
+  const ownerFilter = filters.getString("owner");
+  const dueFrom = filters.getString("dueFrom");
+  const dueTo = filters.getString("dueTo");
+  const createdByFilter = filters.getString("createdBy");
+  const overdueOnly = filters.getBool("overdueOnly");
+  const noDueDate = filters.getBool("noDueDate");
 
   const filteredTasks = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return initialTasks.filter((task) => {
       if (statusFilter && task.status !== statusFilter) return false;
       if (priorityFilter && task.priority !== priorityFilter) return false;
-      if (ownerFilter === "__unassigned__" && task.assignedToId !== null) return false;
-      if (ownerFilter && ownerFilter !== "__unassigned__" && task.assignedToId !== ownerFilter) {
+      if (!matchOwnerFilter(task.assignedToId, ownerFilter)) return false;
+      if (createdByFilter && task.createdBy.id !== createdByFilter) return false;
+      if (overdueOnly && !isOverdue(task)) return false;
+      if (noDueDate) {
+        if (task.dueAt) return false;
+      } else if (!matchDateRange(task.dueAt, dueFrom, dueTo)) {
         return false;
       }
-      if (overdueOnly && !isOverdue(task)) return false;
-      if (!q) return true;
-
-      return [task.title, task.description, task.assignedTo?.name, task.createdBy.name]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(q));
+      if (
+        !matchTextSearch(search, [
+          task.title,
+          task.description,
+          task.assignedTo?.name,
+          task.createdBy.name,
+        ])
+      ) {
+        return false;
+      }
+      return true;
     });
-  }, [initialTasks, overdueOnly, ownerFilter, priorityFilter, search, statusFilter]);
+  }, [
+    createdByFilter,
+    dueFrom,
+    dueTo,
+    initialTasks,
+    noDueDate,
+    overdueOnly,
+    ownerFilter,
+    priorityFilter,
+    search,
+    statusFilter,
+  ]);
 
   function resetForm() {
     setEditing(null);
@@ -224,7 +278,8 @@ export function TasksManagement({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <div className={`grid gap-6 ${readOnly ? "" : "xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"}`}>
+      {!readOnly ? (
       <section className="rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -343,6 +398,7 @@ export function TasksManagement({
           </button>
         </form>
       </section>
+      ) : null}
 
       <section className="min-w-0 rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -352,33 +408,29 @@ export function TasksManagement({
               {filteredTasks.length} / {initialTasks.length} tasks
             </p>
           </div>
-          <button
-            type="button"
-            className={DASH_BTN_TABLE}
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("");
-              setPriorityFilter("");
-              setOwnerFilter("");
-              setOverdueOnly(false);
-            }}
-          >
-            Reset filters
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <CrmImportExportToolbar entity="tasks" readOnly={readOnly} />
+            <CrmFilterToolbar
+              activeCount={filters.activeCount}
+              advancedOpen={filters.advancedOpen}
+              onToggleAdvanced={() => filters.setAdvancedOpen((open) => !open)}
+              onReset={filters.resetAll}
+            />
+          </div>
         </div>
 
         <div className={`${DASH_FILTER_BAR} mt-4`}>
-          <div className="grid gap-2 md:grid-cols-5">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
             <input
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => filters.setString("q", e.target.value)}
               placeholder="Search tasks..."
             />
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => filters.setString("status", e.target.value)}
             >
               <option value="">All statuses</option>
               {TASK_STATUS_OPTIONS.map((status) => (
@@ -388,9 +440,9 @@ export function TasksManagement({
               ))}
             </select>
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
+              onChange={(e) => filters.setString("priority", e.target.value)}
             >
               <option value="">All priorities</option>
               {TASK_PRIORITY_OPTIONS.map((priority) => (
@@ -400,30 +452,56 @@ export function TasksManagement({
               ))}
             </select>
             {isAdmin ? (
-              <select
-                className={inputClass}
+              <CrmOwnerSelect
                 value={ownerFilter}
-                onChange={(e) => setOwnerFilter(e.target.value)}
-              >
-                <option value="">All assignees</option>
-                <option value="__unassigned__">Unassigned</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <label className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-border bg-bg-primary px-3 py-2 text-sm font-semibold text-text-secondary">
-              <input
-                type="checkbox"
-                checked={overdueOnly}
-                onChange={(e) => setOverdueOnly(e.target.checked)}
-                className="h-4 w-4 accent-brand-primary"
+                onChange={(value) => filters.setString("owner", value)}
+                users={users}
+                placeholder="All assignees"
               />
-              Overdue only
-            </label>
+            ) : null}
+            <CrmFilterCheckbox
+              label="Overdue only"
+              checked={overdueOnly}
+              onChange={(checked) => filters.setBool("overdueOnly", checked)}
+            />
           </div>
+
+          <CrmAdvancedFiltersPanel open={filters.advancedOpen}>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              {isAdmin ? (
+                <CrmFilterField label="Created by">
+                  <CrmOwnerSelect
+                    value={createdByFilter}
+                    onChange={(value) => filters.setString("createdBy", value)}
+                    users={users}
+                    includeUnassigned={false}
+                    placeholder="Anyone"
+                  />
+                </CrmFilterField>
+              ) : null}
+              <CrmFilterField label="Due from">
+                <input
+                  type="date"
+                  value={dueFrom}
+                  onChange={(e) => filters.setString("dueFrom", e.target.value)}
+                  className={CRM_FILTER_INPUT_CLASS}
+                />
+              </CrmFilterField>
+              <CrmFilterField label="Due to">
+                <input
+                  type="date"
+                  value={dueTo}
+                  onChange={(e) => filters.setString("dueTo", e.target.value)}
+                  className={CRM_FILTER_INPUT_CLASS}
+                />
+              </CrmFilterField>
+              <CrmFilterCheckbox
+                label="No due date"
+                checked={noDueDate}
+                onChange={(checked) => filters.setBool("noDueDate", checked)}
+              />
+            </div>
+          </CrmAdvancedFiltersPanel>
         </div>
 
         {initialTasks.length === 0 ? (
@@ -480,6 +558,15 @@ export function TasksManagement({
                         <button
                           type="button"
                           className={DASH_BTN_TABLE}
+                          onClick={() => setNotesFor({ id: task.id, title: task.title })}
+                        >
+                          Notes
+                        </button>
+                      {!readOnly ? (
+                      <>
+                        <button
+                          type="button"
+                          className={DASH_BTN_TABLE}
                           onClick={() => {
                             setEditing(task);
                             setForm(taskToForm(task));
@@ -497,6 +584,8 @@ export function TasksManagement({
                             Delete
                           </button>
                         ) : null}
+                      </>
+                      ) : null}
                       </div>
                     </td>
                   </tr>
@@ -506,6 +595,19 @@ export function TasksManagement({
           </div>
         )}
       </section>
+
+      {notesFor ? (
+        <CrmNotesPanel
+          className="mt-6"
+          entityType="task"
+          entityId={notesFor.id}
+          entityTitle={notesFor.title}
+          readOnly={readOnly}
+          canDelete={canDeleteNotes}
+          currentUserId={currentUserId}
+          onClose={() => setNotesFor(null)}
+        />
+      ) : null}
     </div>
   );
 }

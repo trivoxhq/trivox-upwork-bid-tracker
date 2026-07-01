@@ -1,8 +1,9 @@
 import type { Role } from "@/generated/prisma-client";
+import { canEditAnyBid, canViewTeamWide } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function listBidsForActor(actor: { id: string; role: Role }) {
-  const where = actor.role === "admin" ? {} : { addedById: actor.id };
+  const where = canViewTeamWide(actor.role) ? {} : { addedById: actor.id };
 
   const bids = await prisma.bid.findMany({
     where,
@@ -22,6 +23,6 @@ export async function listBidsForActor(actor: { id: string; role: Role }) {
 
   return bids.map((bid) => ({
     ...bid,
-    memberEditLocked: actor.role !== "admin",
+    memberEditLocked: !canEditAnyBid(actor.role),
   }));
 }

@@ -5,6 +5,7 @@ import { listBidsForActor } from "@/lib/bids/list-bids-for-actor";
 import { BidsTable } from "@/components/dashboard/bids-table";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCrmPagePermissions } from "@/lib/auth/page-permissions";
 
 export default async function DashboardBidsPage() {
   const user = await getCurrentUser();
@@ -14,7 +15,7 @@ export default async function DashboardBidsPage() {
 
   const bidsRaw = await listBidsForActor({ id: user.sub, role: user.role });
   const bids = mapBidsToTableRows(bidsRaw);
-  const isAdmin = user.role === "admin";
+  const perms = getCrmPagePermissions(user.role);
 
   return (
     <div className="flex min-w-0 flex-col">
@@ -48,7 +49,12 @@ export default async function DashboardBidsPage() {
           <div className="rounded-[21px] bg-bg-primary/70 px-2 py-3 sm:p-4 md:p-5">
             <BidsTable
               bids={bids}
-              isAdmin={isAdmin}
+              isAdmin={perms.canEditAnyBid}
+              readOnly={perms.readOnly}
+              showAddedBy={perms.canViewTeamWide}
+              canDelete={perms.canDelete}
+              currentUserId={user.sub}
+              canDeleteNotes={perms.canDelete}
               tableHeading="Bid log"
               sectionGapClassName="mt-0"
             />

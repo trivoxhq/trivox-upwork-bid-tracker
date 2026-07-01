@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { LeadsManagement } from "@/components/dashboard/leads-management";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCrmPagePermissions } from "@/lib/auth/page-permissions";
+import { canViewTeamWide } from "@/lib/auth/roles";
 import { LEAD_INCLUDE_USERS, mapLeadToRow } from "@/lib/leads/map-lead";
 import { prisma } from "@/lib/prisma";
 
@@ -20,10 +22,11 @@ export default async function DashboardLeadsPage() {
     redirect("/login");
   }
 
+  const perms = getCrmPagePermissions(actor.role);
+
   const [leadsRaw, usersRaw] = await Promise.all([
     prisma.lead.findMany({
-      where:
-        actor.role === "admin"
+      where: canViewTeamWide(actor.role)
           ? undefined
           : {
               OR: [{ assignedToId: actor.id }, { createdById: actor.id }],
@@ -54,8 +57,10 @@ export default async function DashboardLeadsPage() {
         <LeadsManagement
           initialLeads={leadsRaw.map(mapLeadToRow)}
           users={usersRaw}
-          isAdmin={actor.role === "admin"}
+          isAdmin={perms.canAssign}
+          readOnly={perms.readOnly}
           currentUserId={actor.id}
+          canDeleteNotes={perms.canDelete}
         />
       </div>
     </div>

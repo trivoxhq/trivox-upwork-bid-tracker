@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { Suspense, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +13,23 @@ import {
   DASH_TABLE_TH,
 } from "@/components/dashboard/dashboard-classes";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CrmImportExportToolbar } from "@/components/dashboard/crm-import-export-toolbar";
+import { CrmNotesPanel } from "@/components/dashboard/crm-notes-panel";
+import {
+  CrmAdvancedFiltersPanel,
+  CrmFilterCheckbox,
+  CrmFilterField,
+  CrmFilterToolbar,
+  CRM_FILTER_INPUT_CLASS,
+  CrmOwnerSelect,
+} from "@/components/dashboard/crm-advanced-filters";
+import { useCrmFilterParams } from "@/hooks/use-crm-filter-params";
+import {
+  distinctSorted,
+  matchDateRange,
+  matchOwnerFilter,
+  matchTextSearch,
+} from "@/lib/filters/helpers";
 import { LEAD_SOURCE_OPTIONS, LEAD_STATUS_OPTIONS } from "@/lib/leads/catalog";
 import type { LeadRow, LeadUserSummary } from "@/lib/leads/types";
 
@@ -33,7 +50,9 @@ type LeadsManagementProps = {
   initialLeads: LeadRow[];
   users: LeadUserSummary[];
   isAdmin: boolean;
+  readOnly?: boolean;
   currentUserId: string;
+  canDeleteNotes?: boolean;
 };
 
 const emptyForm: LeadFormState = {
@@ -111,23 +130,45 @@ function LeadStatusPill({ status }: { status: string }) {
   );
 }
 
-export function LeadsManagement({
+export function LeadsManagement(props: LeadsManagementProps) {
+  return (
+    <Suspense fallback={<p className="mt-8 text-sm text-text-secondary">Loading filters…</p>}>
+      <LeadsManagementInner {...props} />
+    </Suspense>
+  );
+}
+
+function LeadsManagementInner({
   initialLeads,
   users,
   isAdmin,
+  readOnly = false,
   currentUserId,
+  canDeleteNotes = false,
 }: LeadsManagementProps) {
   const router = useRouter();
+  const [notesFor, setNotesFor] = useState<{ id: string; title: string } | null>(null);
   const [form, setForm] = useState<LeadFormState>(() => ({
     ...emptyForm,
     assignedToId: isAdmin ? "" : currentUserId,
   }));
   const [editing, setEditing] = useState<LeadRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
+
+  const filters = useCrmFilterParams({
+    stringKeys: ["q", "status", "source", "owner", "country", "createdBy", "updatedFrom", "updatedTo"],
+    boolKeys: ["openOnly"],
+  });
+
+  const search = filters.getString("q");
+  const statusFilter = filters.getString("status");
+  const sourceFilter = filters.getString("source");
+  const ownerFilter = filters.getString("owner");
+  const countryFilter = filters.getString("country");
+  const createdByFilter = filters.getString("createdBy");
+  const updatedFrom = filters.getString("updatedFrom");
+  const updatedTo = filters.getString("updatedTo");
+  const openOnly = filters.getBool("openOnly");
 
   const sourceOptions = useMemo(() => {
     const values = new Set<string>(LEAD_SOURCE_OPTIONS);
@@ -137,32 +178,50 @@ export function LeadsManagement({
     return Array.from(values).sort();
   }, [initialLeads]);
 
+  const countryOptions = useMemo(
+    () => distinctSorted(initialLeads.map((lead) => lead.country)),
+    [initialLeads],
+  );
+
   const filteredLeads = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return initialLeads.filter((lead) => {
       if (statusFilter && lead.status !== statusFilter) return false;
       if (sourceFilter && lead.source !== sourceFilter) return false;
-      if (ownerFilter === "__unassigned__" && lead.assignedToId !== null) return false;
-      if (ownerFilter && ownerFilter !== "__unassigned__" && lead.assignedToId !== ownerFilter) {
+      if (countryFilter && lead.country !== countryFilter) return false;
+      if (!matchOwnerFilter(lead.assignedToId, ownerFilter)) return false;
+      if (createdByFilter && lead.createdBy.id !== createdByFilter) return false;
+      if (openOnly && (lead.status === "Won" || lead.status === "Lost")) return false;
+      if (!matchDateRange(lead.updatedAt, updatedFrom, updatedTo)) return false;
+      if (
+        !matchTextSearch(search, [
+          lead.title,
+          lead.clientName,
+          lead.email,
+          lead.phone,
+          lead.company,
+          lead.country,
+          lead.source,
+          lead.notes,
+          lead.assignedTo?.name,
+          lead.createdBy.name,
+        ])
+      ) {
         return false;
       }
-      if (!q) return true;
-
-      return [
-        lead.title,
-        lead.clientName,
-        lead.email,
-        lead.phone,
-        lead.company,
-        lead.country,
-        lead.source,
-        lead.assignedTo?.name,
-        lead.createdBy.name,
-      ]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(q));
+      return true;
     });
-  }, [initialLeads, ownerFilter, search, sourceFilter, statusFilter]);
+  }, [
+    countryFilter,
+    createdByFilter,
+    initialLeads,
+    openOnly,
+    ownerFilter,
+    search,
+    sourceFilter,
+    statusFilter,
+    updatedFrom,
+    updatedTo,
+  ]);
 
   function resetForm() {
     setEditing(null);
@@ -240,7 +299,8 @@ export function LeadsManagement({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+    <div className={`grid gap-6 ${readOnly ? "" : "xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"}`}>
+      {!readOnly ? (
       <section className="rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -414,6 +474,7 @@ export function LeadsManagement({
           </button>
         </form>
       </section>
+      ) : null}
 
       <section className="min-w-0 rounded-[22px] border border-border/55 bg-bg-primary/80 p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -423,32 +484,29 @@ export function LeadsManagement({
               {filteredLeads.length} / {initialLeads.length} leads
             </p>
           </div>
-          <button
-            type="button"
-            className={DASH_BTN_TABLE}
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("");
-              setSourceFilter("");
-              setOwnerFilter("");
-            }}
-          >
-            Reset filters
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <CrmImportExportToolbar entity="leads" readOnly={readOnly} />
+            <CrmFilterToolbar
+              activeCount={filters.activeCount}
+              advancedOpen={filters.advancedOpen}
+              onToggleAdvanced={() => filters.setAdvancedOpen((open) => !open)}
+              onReset={filters.resetAll}
+            />
+          </div>
         </div>
 
         <div className={`${DASH_FILTER_BAR} mt-4`}>
-          <div className="grid gap-2 md:grid-cols-4">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
             <input
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => filters.setString("q", e.target.value)}
               placeholder="Search leads..."
             />
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => filters.setString("status", e.target.value)}
             >
               <option value="">All stages</option>
               {LEAD_STATUS_OPTIONS.map((status) => (
@@ -458,9 +516,9 @@ export function LeadsManagement({
               ))}
             </select>
             <select
-              className={inputClass}
+              className={CRM_FILTER_INPUT_CLASS}
               value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
+              onChange={(e) => filters.setString("source", e.target.value)}
             >
               <option value="">All sources</option>
               {sourceOptions.map((source) => (
@@ -469,22 +527,64 @@ export function LeadsManagement({
                 </option>
               ))}
             </select>
+            <select
+              className={CRM_FILTER_INPUT_CLASS}
+              value={countryFilter}
+              onChange={(e) => filters.setString("country", e.target.value)}
+            >
+              <option value="">All countries</option>
+              {countryOptions.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
+            </select>
             {isAdmin ? (
-              <select
-                className={inputClass}
+              <CrmOwnerSelect
                 value={ownerFilter}
-                onChange={(e) => setOwnerFilter(e.target.value)}
-              >
-                <option value="">All owners</option>
-                <option value="__unassigned__">Unassigned</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => filters.setString("owner", value)}
+                users={users}
+                placeholder="All assignees"
+              />
             ) : null}
           </div>
+
+          <CrmAdvancedFiltersPanel open={filters.advancedOpen}>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              {isAdmin ? (
+                <CrmFilterField label="Created by">
+                  <CrmOwnerSelect
+                    value={createdByFilter}
+                    onChange={(value) => filters.setString("createdBy", value)}
+                    users={users}
+                    includeUnassigned={false}
+                    placeholder="Anyone"
+                  />
+                </CrmFilterField>
+              ) : null}
+              <CrmFilterField label="Updated from">
+                <input
+                  type="date"
+                  value={updatedFrom}
+                  onChange={(e) => filters.setString("updatedFrom", e.target.value)}
+                  className={CRM_FILTER_INPUT_CLASS}
+                />
+              </CrmFilterField>
+              <CrmFilterField label="Updated to">
+                <input
+                  type="date"
+                  value={updatedTo}
+                  onChange={(e) => filters.setString("updatedTo", e.target.value)}
+                  className={CRM_FILTER_INPUT_CLASS}
+                />
+              </CrmFilterField>
+              <CrmFilterCheckbox
+                label="Open leads only"
+                checked={openOnly}
+                onChange={(checked) => filters.setBool("openOnly", checked)}
+              />
+            </div>
+          </CrmAdvancedFiltersPanel>
         </div>
 
         {initialLeads.length === 0 ? (
@@ -549,6 +649,17 @@ export function LeadsManagement({
                         <button
                           type="button"
                           className={DASH_BTN_TABLE}
+                          onClick={() =>
+                            setNotesFor({ id: lead.id, title: lead.title })
+                          }
+                        >
+                          Notes
+                        </button>
+                      {!readOnly ? (
+                      <>
+                        <button
+                          type="button"
+                          className={DASH_BTN_TABLE}
                           onClick={() => {
                             setEditing(lead);
                             setForm(leadToForm(lead));
@@ -566,6 +677,8 @@ export function LeadsManagement({
                             Delete
                           </button>
                         ) : null}
+                      </>
+                      ) : null}
                       </div>
                     </td>
                   </tr>
@@ -575,6 +688,19 @@ export function LeadsManagement({
           </div>
         )}
       </section>
+
+      {notesFor ? (
+        <CrmNotesPanel
+          className="mt-6"
+          entityType="lead"
+          entityId={notesFor.id}
+          entityTitle={notesFor.title}
+          readOnly={readOnly}
+          canDelete={canDeleteNotes}
+          currentUserId={currentUserId}
+          onClose={() => setNotesFor(null)}
+        />
+      ) : null}
     </div>
   );
 }

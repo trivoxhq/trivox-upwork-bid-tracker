@@ -400,10 +400,13 @@ function BidsTableInner({
               <EmptyState title="No bids match current filters" description="Try adjusting or resetting filters." />
             ) : (
               <div className="min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-border/80 bg-bg-primary shadow-sm [-webkit-overflow-scrolling:touch] touch-pan-x">
-                <table className="min-w-[920px] w-full border-collapse text-left text-sm">
+                <table className="min-w-[1280px] w-full border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-border bg-bg-secondary/60">
                       <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Date</th>
+                      <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Karachi</th>
+                      <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>EST</th>
+                      <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Since prev</th>
                       {showAddedBy ? (
                         <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>By</th>
                       ) : null}
@@ -412,6 +415,8 @@ function BidsTableInner({
                       <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Niche</th>
                       <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Status</th>
                       <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Value</th>
+                      <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Connects</th>
+                      <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Boost</th>
                       <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Actions</th>
                     </tr>
                   </thead>
@@ -420,6 +425,21 @@ function BidsTableInner({
                       <tr key={bid.id} className={DASH_TABLE_ROW}>
                         <td className="whitespace-nowrap px-4 py-3 text-text-primary tabular-nums">
                           {formatTableDate(bid.date)}
+                        </td>
+                        <td
+                          className="whitespace-nowrap px-4 py-3 text-text-secondary text-xs"
+                          title={bid.karachiTime}
+                        >
+                          {bid.karachiTime}
+                        </td>
+                        <td
+                          className="whitespace-nowrap px-4 py-3 text-text-secondary text-xs"
+                          title={bid.estTime}
+                        >
+                          {bid.estTime}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-text-secondary tabular-nums text-xs">
+                          {bid.timeSincePrev ?? "—"}
                         </td>
                         {showAddedBy ? (
                           <td
@@ -464,6 +484,12 @@ function BidsTableInner({
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums text-text-primary">
                           {formatValue(bid.value)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-text-primary">
+                          {bid.connects}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-text-primary">
+                          {bid.boost > 0 ? bid.boost : "—"}
                         </td>
                         <td className="max-w-40 px-4 py-3 text-right sm:max-w-none">
                           <div className="flex flex-col gap-2 sm:inline-flex sm:max-w-none sm:flex-row sm:flex-wrap sm:justify-end">

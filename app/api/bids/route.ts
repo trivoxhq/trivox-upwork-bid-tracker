@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/auth/require-admin-api";
 import { getCurrentUser } from "@/lib/auth/session";
 import { readOnlyForbiddenResponse } from "@/lib/auth/api-guards";
 import { canWrite } from "@/lib/auth/roles";
+import { parseNonNegativeBidInt } from "@/lib/bids/parse-bid-integers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -40,6 +41,8 @@ type CreateBidBody = {
   client?: unknown;
   bidLink?: unknown;
   value?: unknown;
+  connects?: unknown;
+  boost?: unknown;
   notes?: unknown;
 };
 
@@ -114,6 +117,8 @@ export async function POST(request: Request) {
     const nicheId = requiredNonEmptyString(body.nicheId, "nicheId", errors);
     const client = requiredNonEmptyString(body.client, "client", errors);
     const value = parseBidValue(body.value, errors);
+    const connects = parseNonNegativeBidInt(body.connects, "connects", errors);
+    const boost = parseNonNegativeBidInt(body.boost, "boost", errors);
 
     const bidLink = optionalNullableString(body.bidLink, "bidLink", errors);
     const notes = optionalNullableString(body.notes, "notes", errors);
@@ -170,6 +175,8 @@ export async function POST(request: Request) {
         bidLink,
         notes,
         value: value!,
+        connects: connects!,
+        boost: boost!,
         addedById: actor.id,
       },
       include: {

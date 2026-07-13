@@ -5,6 +5,13 @@ import { FormEvent, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { modalAnimation } from "@/components/ui/motion";
+import {
+  BidMetricInput,
+  BoostIcon,
+  ConnectsIcon,
+  DollarIcon,
+} from "@/components/dashboard/bid-metric-input";
+import { parseDateTimeLocal, toDateTimeLocalValue } from "@/lib/bids/time-display";
 
 type CatalogRow = { id: string; name: string; isActive: boolean };
 
@@ -30,6 +37,8 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
   const [client, setClient] = useState("");
   const [bidLink, setBidLink] = useState("");
   const [value, setValue] = useState("");
+  const [connects, setConnects] = useState("");
+  const [boost, setBoost] = useState("");
   const [notes, setNotes] = useState("");
 
   const [profiles, setProfiles] = useState<CatalogRow[]>([]);
@@ -43,6 +52,11 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setDate(toDateTimeLocalValue(new Date().toISOString()));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -117,6 +131,8 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
     setClient("");
     setBidLink("");
     setValue("");
+    setConnects("");
+    setBoost("");
     setNotes("");
     setError(null);
     setProfileId(profiles[0]?.id ?? "");
@@ -152,9 +168,21 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
       return;
     }
 
-    const isoDate = new Date(`${date.trim()}T12:00:00`);
-    if (Number.isNaN(isoDate.getTime())) {
-      setError("Invalid date.");
+    const parsedConnects = connects.trim() === "" ? 0 : Number.parseInt(connects, 10);
+    if (!Number.isFinite(parsedConnects) || !Number.isInteger(parsedConnects) || parsedConnects < 0) {
+      setError("Connects must be a whole number ≥ 0.");
+      return;
+    }
+
+    const parsedBoost = boost.trim() === "" ? 0 : Number.parseInt(boost, 10);
+    if (!Number.isFinite(parsedBoost) || !Number.isInteger(parsedBoost) || parsedBoost < 0) {
+      setError("Boost must be a whole number ≥ 0.");
+      return;
+    }
+
+    const isoDate = parseDateTimeLocal(date.trim());
+    if (!isoDate) {
+      setError("Invalid date and time.");
       return;
     }
 
@@ -166,6 +194,8 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
         nicheId,
         client: client.trim(),
         value: parsedValue,
+        connects: parsedConnects,
+        boost: parsedBoost,
       };
 
       const link = bidLink.trim();
@@ -277,13 +307,13 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
                   </p>
                 ) : (
                   <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="sm:col-span-1">
+                    <div className="sm:col-span-2">
                       <label htmlFor="add-bid-date" className={labelClass}>
-                        Date
+                        Date & time
                       </label>
                       <input
                         id="add-bid-date"
-                        type="date"
+                        type="datetime-local"
                         required
                         value={date}
                         onChange={(ev) => setDate(ev.target.value)}
@@ -366,20 +396,35 @@ export function AddBidModal({ open, onClose, onCreated }: AddBidModalProps) {
                     </div>
 
                     <div className="sm:col-span-1">
-                      <label htmlFor="add-bid-value" className={labelClass}>
-                        Value
-                      </label>
-                      <input
+                      <BidMetricInput
                         id="add-bid-value"
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="0"
-                        min={0}
-                        step={1}
+                        label="Value"
                         value={value}
-                        onChange={(ev) => setValue(ev.target.value)}
+                        onChange={setValue}
+                        icon={<DollarIcon />}
                         disabled={submitting}
-                        className={inputClass}
+                      />
+                    </div>
+
+                    <div className="sm:col-span-1">
+                      <BidMetricInput
+                        id="add-bid-connects"
+                        label="Connects"
+                        value={connects}
+                        onChange={setConnects}
+                        icon={<ConnectsIcon />}
+                        disabled={submitting}
+                      />
+                    </div>
+
+                    <div className="sm:col-span-1">
+                      <BidMetricInput
+                        id="add-bid-boost"
+                        label="Boost"
+                        value={boost}
+                        onChange={setBoost}
+                        icon={<BoostIcon />}
+                        disabled={submitting}
                       />
                     </div>
 

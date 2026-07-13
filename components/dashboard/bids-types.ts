@@ -13,11 +13,16 @@ export type BidTableRow = {
   dealId: string | null;
   dealTitle: string | null;
   value: number;
+  connects: number;
+  boost: number;
   notes: string | null;
   addedById: string;
   createdAt: string;
   updatedAt: string;
   addedBy: { name: string };
+  karachiTime: string;
+  estTime: string;
+  timeSincePrev: string | null;
   /** Members can add bids only; admins can edit existing bids. */
   memberEditLocked: boolean;
 };

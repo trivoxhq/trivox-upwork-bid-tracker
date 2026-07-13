@@ -5,6 +5,7 @@ import { resolveLostReasonForBid } from "@/lib/lost-reasons/normalize";
 import { logCrmAudit } from "@/lib/audit/log-crm-audit";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canEditAnyBid, canDelete } from "@/lib/auth/roles";
+import { parseNonNegativeBidInt } from "@/lib/bids/parse-bid-integers";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_UPDATABLE_KEYS = new Set([
@@ -16,6 +17,8 @@ const ADMIN_UPDATABLE_KEYS = new Set([
   "status",
   "lostReason",
   "value",
+  "connects",
+  "boost",
   "notes",
   "addedById",
   "dealId",
@@ -139,6 +142,16 @@ async function buildAdminUpdate(
     } else {
       data.value = v;
     }
+  }
+
+  if ("connects" in body && body.connects !== undefined) {
+    const connects = parseNonNegativeBidInt(body.connects, "connects", errors);
+    if (connects !== null && !errors.connects) data.connects = connects;
+  }
+
+  if ("boost" in body && body.boost !== undefined) {
+    const boost = parseNonNegativeBidInt(body.boost, "boost", errors);
+    if (boost !== null && !errors.boost) data.boost = boost;
   }
 
   if ("notes" in body && body.notes !== undefined) {

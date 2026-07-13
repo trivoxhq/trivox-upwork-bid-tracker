@@ -52,6 +52,8 @@ export async function importBidRows(
     if (status && !isValidBidStatus(status)) rowErrors.push("Status must be a valid bid status.");
 
     const value = parseIntWithDefault(pickField(record, "value", "amount"), 0, "Value", rowErrors);
+    const connects = parseIntWithDefault(pickField(record, "connects"), 0, "Connects", rowErrors);
+    const boost = parseIntWithDefault(pickField(record, "boost"), 0, "Boost", rowErrors);
 
     if (rowErrors.length > 0 || !date || !profileId || !nicheId) {
       result.failed += 1;
@@ -69,6 +71,8 @@ export async function importBidRows(
           bidLink: pickField(record, "bid_link", "link", "url") || null,
           status,
           value,
+          connects,
+          boost,
           notes: pickField(record, "notes") || null,
           addedById: actorId,
         },

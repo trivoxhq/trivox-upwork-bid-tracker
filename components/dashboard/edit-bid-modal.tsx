@@ -7,6 +7,13 @@ import toast from "react-hot-toast";
 import type { BidTableRow } from "@/components/dashboard/bids-types";
 import { BID_STATUS_OPTIONS } from "@/components/dashboard/bid-status-badge";
 import { LostReasonSelect } from "@/components/dashboard/lost-reason-select";
+import {
+  BidMetricInput,
+  BoostIcon,
+  ConnectsIcon,
+  DollarIcon,
+} from "@/components/dashboard/bid-metric-input";
+import { parseDateTimeLocal, toDateTimeLocalValue } from "@/lib/bids/time-display";
 import { modalAnimation } from "@/components/ui/motion";
 
 type EditBidModalProps = {
@@ -36,12 +43,7 @@ function formatBidDateDisplay(iso: string): string {
 }
 
 function toDateInputValue(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return toDateTimeLocalValue(iso);
 }
 
 type CatalogRow = { id: string; name: string; isActive: boolean };
@@ -81,6 +83,8 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
   const [lostReason, setLostReason] = useState("");
   const [dealId, setDealId] = useState("");
   const [value, setValue] = useState("");
+  const [connects, setConnects] = useState("");
+  const [boost, setBoost] = useState("");
   const [notes, setNotes] = useState("");
 
   const [profiles, setProfiles] = useState<CatalogRow[]>([]);
@@ -119,6 +123,8 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
     setLostReason(bid.lostReason ?? "");
     setDealId(bid.dealId ?? "");
     setValue(String(bid.value));
+    setConnects(String(bid.connects));
+    setBoost(String(bid.boost));
     setNotes(bid.notes ?? "");
     setError(null);
   }, [bid, open]);
@@ -187,9 +193,19 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
         setError("Value must be a whole number.");
         return;
       }
-      const isoDate = new Date(`${date.trim()}T12:00:00`);
-      if (Number.isNaN(isoDate.getTime())) {
-        setError("Invalid date.");
+      const parsedConnects = connects.trim() === "" ? 0 : Number.parseInt(connects, 10);
+      if (!Number.isFinite(parsedConnects) || !Number.isInteger(parsedConnects) || parsedConnects < 0) {
+        setError("Connects must be a whole number ≥ 0.");
+        return;
+      }
+      const parsedBoost = boost.trim() === "" ? 0 : Number.parseInt(boost, 10);
+      if (!Number.isFinite(parsedBoost) || !Number.isInteger(parsedBoost) || parsedBoost < 0) {
+        setError("Boost must be a whole number ≥ 0.");
+        return;
+      }
+      const isoDate = parseDateTimeLocal(date.trim());
+      if (!isoDate) {
+        setError("Invalid date and time.");
         return;
       }
 
@@ -200,6 +216,8 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
         client: client.trim(),
         status: status.trim(),
         value: parsedValue,
+        connects: parsedConnects,
+        boost: parsedBoost,
       };
       const link = bidLink.trim();
       payload.bidLink = link.length > 0 ? link : null;
@@ -379,19 +397,31 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
                           )}
                         </div>
                       </div>
+                      <div className="sm:col-span-1">
+                        <span className={labelClass}>Connects</span>
+                        <div className={readOnlyFieldClass} tabIndex={-1}>
+                          {bid.connects}
+                        </div>
+                      </div>
+                      <div className="sm:col-span-1">
+                        <span className={labelClass}>Boost</span>
+                        <div className={readOnlyFieldClass} tabIndex={-1}>
+                          {bid.boost}
+                        </div>
+                      </div>
                     </>
                   ) : (
                     <>
                       {catalogsLoading ? (
                         <p className="sm:col-span-2 text-sm text-text-secondary">Loading profiles and niches…</p>
                       ) : null}
-                      <div className="sm:col-span-1">
+                      <div className="sm:col-span-2">
                         <label htmlFor="edit-bid-date" className={labelClass}>
-                          Date
+                          Date & time
                         </label>
                         <input
                           id="edit-bid-date"
-                          type="date"
+                          type="datetime-local"
                           required
                           value={date}
                           onChange={(ev) => setDate(ev.target.value)}
@@ -468,18 +498,33 @@ export function EditBidModal({ bid, open, isAdmin, onClose, onSaved }: EditBidMo
                         </select>
                       </div>
                       <div className="sm:col-span-1">
-                        <label htmlFor="edit-bid-value" className={labelClass}>
-                          Value
-                        </label>
-                        <input
+                        <BidMetricInput
                           id="edit-bid-value"
-                          type="number"
-                          min={0}
-                          step={1}
+                          label="Value"
                           value={value}
-                          onChange={(ev) => setValue(ev.target.value)}
+                          onChange={setValue}
+                          icon={<DollarIcon />}
                           disabled={submitting}
-                          className={inputClass}
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <BidMetricInput
+                          id="edit-bid-connects"
+                          label="Connects"
+                          value={connects}
+                          onChange={setConnects}
+                          icon={<ConnectsIcon />}
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <BidMetricInput
+                          id="edit-bid-boost"
+                          label="Boost"
+                          value={boost}
+                          onChange={setBoost}
+                          icon={<BoostIcon />}
+                          disabled={submitting}
                         />
                       </div>
                     </>

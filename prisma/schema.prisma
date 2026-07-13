@@ -77,6 +77,8 @@ model Bid {
   bidLink   String?
   status     String   @default("New")
   value      Int      @default(0)
+  connects   Int      @default(0)
+  boost      Int      @default(0)
   notes      String?
   lostReason String?
   dealId     String?

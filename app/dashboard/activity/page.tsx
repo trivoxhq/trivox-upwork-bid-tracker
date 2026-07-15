@@ -14,7 +14,7 @@ export default async function DashboardActivityPage() {
       <DashboardPageHero
         eyebrow="CRM"
         title="Activity"
-        description="Unified feed of CRM audits, notes, and client history."
+        description="CRM audits, notes, and client history — attendance shows check-in, check-out, break, and live session time."
         breadcrumb={[
           { href: "/dashboard", label: "Dashboard" },
           { label: "Activity" },

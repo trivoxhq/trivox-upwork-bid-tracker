@@ -26,6 +26,9 @@ model User {
   dailyTarget    Int      @default(0)
   weeklyTarget   Int      @default(0)
   monthlyTarget  Int      @default(0)
+  hourlyRate     Int      @default(0)
+  monthlySalary  Int      @default(0)
+  timezone       String   @default("Asia/Karachi")
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   bids           Bid[]
@@ -42,6 +45,8 @@ model User {
   dealsOwned            Deal[]          @relation("DealOwner")
   crmNotesCreated       CrmNote[]       @relation("CrmNoteCreatedBy")
   crmAttachmentsCreated CrmAttachment[] @relation("CrmAttachmentCreatedBy")
+  attendanceRecords     AttendanceRecord[]
+  attendanceSettingsUpdated AttendanceSettings[] @relation("AttendanceSettingsUpdatedBy")
 
   @@map("users")
 }
@@ -292,4 +297,94 @@ model CrmAuditLog {
   @@index([userId, createdAt])
   @@index([createdAt])
   @@map("crm_audit_logs")
+}
+
+/// Singleton-style org settings (one row with id = "default"). Updates require admin + ATTENDANCE_ADMIN_KEY.
+model AttendanceSettings {
+  id                         String   @id @default("default")
+  shiftTotalMinutes          Int      @default(540)
+  breakAllowanceMinutes      Int      @default(60)
+  minFullDayWorkingMinutes   Int      @default(480)
+  minHalfDayWorkingMinutes   Int      @default(300)
+  workingDaysPerMonth        Int      @default(22)
+  activityTrackingEnabled    Boolean  @default(false)
+  updatedById                String?
+  updatedBy                  User?    @relation("AttendanceSettingsUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt                  DateTime @updatedAt
+
+  @@map("attendance_settings")
+}
+
+model AttendanceRecord {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  workDate           DateTime @db.Date
+  checkInAt          DateTime
+  checkOutAt         DateTime?
+  breakMinutes       Int      @default(0)
+  workingMinutes     Int?
+  salaryAmount       Int?
+  dailySummary       String?  @db.Text
+  dayType            String?
+  status             String   @default("open")
+  checkInIp          String
+  checkInUserAgent   String   @db.Text
+  checkInDeviceId    String?
+  checkOutIp         String?
+  checkOutUserAgent  String?  @db.Text
+  checkOutDeviceId   String?
+  breaks             AttendanceBreak[]
+  eventLogs          AttendanceEventLog[]
+  activityCaptures   AttendanceActivityCapture[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, workDate])
+  @@index([userId, checkInAt])
+  @@index([status])
+  @@index([workDate])
+  @@map("attendance_records")
+}
+
+model AttendanceBreak {
+  id        String    @id @default(uuid())
+  recordId  String
+  record    AttendanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  startedAt DateTime
+  endedAt   DateTime?
+
+  @@index([recordId])
+  @@map("attendance_breaks")
+}
+
+model AttendanceEventLog {
+  id               String   @id @default(uuid())
+  recordId         String
+  record           AttendanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  action           String
+  ipAddress        String
+  userAgent        String   @db.Text
+  deviceFingerprint String?
+  createdAt        DateTime @default(now())
+
+  @@index([recordId, createdAt])
+  @@map("attendance_event_logs")
+}
+
+model AttendanceActivityCapture {
+  id         String   @id @default(uuid())
+  recordId   String
+  record     AttendanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  type       String
+  storedName String?
+  mimeType   String?
+  sizeBytes  Int?
+  metaJson   String?  @db.Text
+  ipAddress  String
+  userAgent  String   @db.Text
+  capturedAt DateTime @default(now())
+
+  @@index([recordId, capturedAt])
+  @@map("attendance_activity_captures")
 }

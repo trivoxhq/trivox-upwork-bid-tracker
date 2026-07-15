@@ -18,14 +18,14 @@ export default async function AdminUsersPage() {
       <DashboardPageHero
         eyebrow="Administration"
         title="Team management"
-        description="Invite @trivoxhq.com teammates, set roles, adjust targets, reset passwords, and activate or deactivate accounts. You cannot deactivate your own account while signed in."
+        description="Roles, bid targets, attendance salary, and passwords. You can’t deactivate your own account."
         breadcrumb={[
           { href: "/dashboard", label: "Dashboard" },
           { label: "Team management" },
         ]}
       />
 
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         <UsersAdminTable currentUserId={user.sub} />
       </div>
     </div>

@@ -82,6 +82,11 @@ export function canEditAnyBid(role: Role): boolean {
   return role === "admin" || role === "manager";
 }
 
+/** Admins manage attendance but are not required to check in themselves. */
+export function canTrackAttendance(role: Role): boolean {
+  return canWrite(role) && role !== "admin";
+}
+
 export function getRoleCapabilities(role: Role): RoleCapabilities {
   return {
     role,

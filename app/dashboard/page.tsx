@@ -29,17 +29,17 @@ export default async function DashboardPage() {
           title="Dashboard"
           description={
             <>
-              Last 7 days and monthly trend charts are directly below, then KPI cards. Open{" "}
+              Charts below, then KPIs.{" "}
               <Link
                 href="/dashboard/bids"
-                className="font-semibold text-brand-primary underline decoration-brand-primary/30 underline-offset-2 transition-colors hover:text-text-primary hover:decoration-brand-primary"
+                className="font-semibold text-brand-primary transition-colors hover:text-text-primary"
               >
                 Bid log
-              </Link>{" "}
-              or{" "}
+              </Link>
+              {" · "}
               <Link
                 href="/dashboard/insights"
-                className="font-semibold text-brand-primary underline decoration-brand-primary/30 underline-offset-2 transition-colors hover:text-text-primary hover:decoration-brand-primary"
+                className="font-semibold text-brand-primary transition-colors hover:text-text-primary"
               >
                 Insights
               </Link>

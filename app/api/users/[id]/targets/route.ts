@@ -50,6 +50,7 @@ export async function PUT(
     const dailyTarget = parseNonNegativeInt(record.dailyTarget, "dailyTarget", errors);
     const weeklyTarget = parseNonNegativeInt(record.weeklyTarget, "weeklyTarget", errors);
     const monthlyTarget = parseNonNegativeInt(record.monthlyTarget, "monthlyTarget", errors);
+    const monthlySalary = parseNonNegativeInt(record.monthlySalary, "monthlySalary", errors);
 
     if (Object.keys(errors).length > 0) {
       return NextResponse.json(
@@ -65,6 +66,7 @@ export async function PUT(
           dailyTarget: dailyTarget!,
           weeklyTarget: weeklyTarget!,
           monthlyTarget: monthlyTarget!,
+          monthlySalary: monthlySalary!,
         },
         select: ADMIN_USER_PUBLIC_SELECT,
       });

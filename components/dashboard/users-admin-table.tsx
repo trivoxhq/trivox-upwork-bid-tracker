@@ -3,6 +3,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { FormEvent, useCallback, useEffect, useId, useState } from "react";
 import {
+  DASH_BTN_TABLE,
+  DASH_FILTER_BAR,
   DASH_MODAL_PANEL,
   DASH_SECTION_TITLE,
   DASH_TABLE_ROW,
@@ -23,6 +25,15 @@ function formatMoney(n: number): string {
   }).format(n);
 }
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  const first = parts[0]?.[0] ?? "";
+  const second =
+    parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : (parts[0]?.[1] ?? "");
+  return `${first}${second}`.toUpperCase() || "?";
+}
+
 function isAdminUserRow(value: unknown): value is AdminUserRow {
   if (value === null || typeof value !== "object") return false;
   const o = value as Record<string, unknown>;
@@ -35,6 +46,8 @@ function isAdminUserRow(value: unknown): value is AdminUserRow {
     typeof o.dailyTarget === "number" &&
     typeof o.weeklyTarget === "number" &&
     typeof o.monthlyTarget === "number" &&
+    typeof o.hourlyRate === "number" &&
+    typeof o.monthlySalary === "number" &&
     typeof o.isActive === "boolean" &&
     typeof o.createdAt === "string"
   );
@@ -54,9 +67,11 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
   const [listError, setListError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
+  const [editKind, setEditKind] = useState<"targets" | "salary" | null>(null);
   const [dailyStr, setDailyStr] = useState("");
   const [weeklyStr, setWeeklyStr] = useState("");
   const [monthlyStr, setMonthlyStr] = useState("");
+  const [monthlySalaryStr, setMonthlySalaryStr] = useState("");
   const [modalError, setModalError] = useState<string | null>(null);
   const [savingTargets, setSavingTargets] = useState(false);
 
@@ -115,17 +130,26 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
     void loadUsers();
   }, [loadUsers]);
 
-  function openEdit(user: AdminUserRow) {
+  function openEditTargets(user: AdminUserRow) {
     setEditing(user);
+    setEditKind("targets");
     setDailyStr(String(user.dailyTarget));
     setWeeklyStr(String(user.weeklyTarget));
     setMonthlyStr(String(user.monthlyTarget));
     setModalError(null);
   }
 
+  function openEditSalary(user: AdminUserRow) {
+    setEditing(user);
+    setEditKind("salary");
+    setMonthlySalaryStr(String(user.monthlySalary));
+    setModalError(null);
+  }
+
   const closeModal = useCallback(() => {
     if (savingTargets) return;
     setEditing(null);
+    setEditKind(null);
     setModalError(null);
   }, [savingTargets]);
 
@@ -257,6 +281,56 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
     }
   }
 
+  async function saveUserTargetsPayload(payload: {
+    dailyTarget: number;
+    weeklyTarget: number;
+    monthlyTarget: number;
+    monthlySalary: number;
+  }) {
+    if (!editing) return;
+    setSavingTargets(true);
+    try {
+      const res = await fetch(`/api/users/${editing.id}/targets`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        user?: unknown;
+        message?: string;
+        errors?: Record<string, string>;
+      } | null;
+
+      if (!res.ok) {
+        const msg =
+          data?.message ??
+          (data?.errors ? Object.values(data.errors).join(" ") : null) ??
+          "Could not save.";
+        setModalError(msg);
+        return;
+      }
+
+      if (!data?.user || !isAdminUserRow(data.user)) {
+        setModalError("Invalid response.");
+        return;
+      }
+
+      const updated = data.user;
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      setEditing(null);
+      setEditKind(null);
+      setModalError(null);
+      toast.success(editKind === "salary" ? "Monthly salary updated." : "Targets updated.");
+    } catch {
+      setModalError("Network error.");
+    } finally {
+      setSavingTargets(false);
+    }
+  }
+
   async function submitTargets(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editing) return;
@@ -278,45 +352,31 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
       return;
     }
 
-    setSavingTargets(true);
-    try {
-      const res = await fetch(`/api/users/${editing.id}/targets`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dailyTarget: daily, weeklyTarget: weekly, monthlyTarget: monthly }),
-      });
+    await saveUserTargetsPayload({
+      dailyTarget: daily,
+      weeklyTarget: weekly,
+      monthlyTarget: monthly,
+      monthlySalary: editing.monthlySalary,
+    });
+  }
 
-      const data = (await res.json().catch(() => null)) as {
-        success?: boolean;
-        user?: unknown;
-        message?: string;
-        errors?: Record<string, string>;
-      } | null;
+  async function submitSalary(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editing) return;
+    setModalError(null);
 
-      if (!res.ok) {
-        const msg =
-          data?.message ??
-          (data?.errors ? Object.values(data.errors).join(" ") : null) ??
-          "Could not update targets.";
-        setModalError(msg);
-        return;
-      }
-
-      if (!data?.user || !isAdminUserRow(data.user)) {
-        setModalError("Invalid response.");
-        return;
-      }
-
-      const updated = data.user;
-      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      setEditing(null);
-      setModalError(null);
-    } catch {
-      setModalError("Network error.");
-    } finally {
-      setSavingTargets(false);
+    const monthlySalary = Number.parseInt(monthlySalaryStr, 10);
+    if (!Number.isFinite(monthlySalary) || !Number.isInteger(monthlySalary) || monthlySalary < 0) {
+      setModalError("Monthly salary must be a whole number ≥ 0.");
+      return;
     }
+
+    await saveUserTargetsPayload({
+      dailyTarget: editing.dailyTarget,
+      weeklyTarget: editing.weeklyTarget,
+      monthlyTarget: editing.monthlyTarget,
+      monthlySalary,
+    });
   }
 
   async function patchActive(user: AdminUserRow, nextActive: boolean) {
@@ -433,9 +493,26 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
 
   if (loading) {
     return (
-      <div className="mt-6 space-y-3" aria-busy="true">
-        <div className="h-10 w-full max-w-md animate-pulse rounded-lg bg-bg-secondary" />
-        <div className="h-48 w-full animate-pulse rounded-xl bg-bg-secondary/80" />
+      <div className="space-y-4" aria-busy="true">
+        <div className={`${DASH_FILTER_BAR} flex items-center justify-between gap-3`}>
+          <div className="h-4 w-36 animate-pulse rounded bg-bg-secondary" />
+          <div className="h-10 w-32 animate-pulse rounded-lg bg-bg-secondary" />
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border/80 bg-bg-primary shadow-sm">
+          <div className="h-12 border-b border-border bg-bg-secondary/50" />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 border-b border-border/60 px-4 py-4 last:border-0"
+            >
+              <div className="h-9 w-9 shrink-0 animate-pulse rounded-md bg-bg-secondary" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-3.5 w-40 max-w-full animate-pulse rounded bg-bg-secondary" />
+                <div className="h-3 w-56 max-w-full animate-pulse rounded bg-bg-secondary/80" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -443,7 +520,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
   if (listError) {
     return (
       <div
-        className="mt-6 rounded-xl border border-border bg-bg-primary px-4 py-3 text-sm text-danger shadow-sm"
+        className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger shadow-sm"
         role="alert"
       >
         {listError}
@@ -451,121 +528,232 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
     );
   }
 
+  const activeCount = users.filter((u) => u.isActive).length;
+
   return (
     <>
-      <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+      <div className={`${DASH_FILTER_BAR} flex flex-wrap items-center justify-between gap-3`}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text-primary">
+            {users.length} {users.length === 1 ? "member" : "members"}
+          </p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            {activeCount} active · {users.length - activeCount} inactive
+          </p>
+        </div>
         <Button type="button" onClick={openAddMember}>
-          + Add Member
+          Add member
         </Button>
       </div>
 
       <div className="mt-4 min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-border/80 bg-bg-primary shadow-sm [-webkit-overflow-scrolling:touch] touch-pan-x">
-        <table className="min-w-[800px] w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg-secondary/60">
-              <th className={DASH_TABLE_TH}>Name</th>
-              <th className={DASH_TABLE_TH}>Email</th>
-              <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Role</th>
-              <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Targets</th>
-              <th className={`whitespace-nowrap ${DASH_TABLE_TH}`}>Active</th>
-              <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/80">
-            {users.map((user) => (
-              <tr
-                key={user.id}
-                className={`${DASH_TABLE_ROW} ${user.isActive ? "" : "opacity-60"}`}
-              >
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-text-primary">{user.name}</td>
-                <td className="max-w-[220px] truncate px-4 py-3 text-text-secondary" title={user.email}>
-                  {user.email}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-text-primary">
-                  {user.id === currentUserId ? (
-                    roleLabel(user.role)
-                  ) : (
-                    <select
-                      className="min-w-[9.5rem] rounded-lg border border-input-border bg-bg-primary px-2 py-1.5 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
-                      value={user.role}
-                      disabled={busyRoleId === user.id}
-                      aria-busy={busyRoleId === user.id}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        if (isValidRole(next)) {
-                          void patchRole(user, next);
-                        }
-                      }}
-                    >
-                      {ASSIGNABLE_ROLES.map((role) => (
-                        <option key={role} value={role}>
-                          {roleLabel(role)}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 tabular-nums text-text-primary">
-                  <span className="text-text-secondary">D</span> {formatMoney(user.dailyTarget)}
-                  <span className="mx-1.5 text-border">·</span>
-                  <span className="text-text-secondary">W</span> {formatMoney(user.weeklyTarget)}
-                  <span className="mx-1.5 text-border">·</span>
-                  <span className="text-text-secondary">M</span> {formatMoney(user.monthlyTarget)}
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={user.isActive}
-                    aria-busy={busyActiveId === user.id}
-                    disabled={
-                      busyActiveId === user.id || (!!user.isActive && user.id === currentUserId)
-                    }
-                    title={
-                      user.isActive && user.id === currentUserId
-                        ? "You cannot deactivate your own account."
-                        : user.isActive
-                          ? "Click to deactivate"
-                          : "Click to activate"
-                    }
-                    onClick={() => patchActive(user, !user.isActive)}
-                    className={`relative inline-flex h-7 w-12 shrink-0 rounded-full border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/35 disabled:cursor-not-allowed disabled:opacity-50 ${DASH_TRANSITION} ${
-                      user.isActive ? "bg-brand-primary/90" : "bg-bg-secondary"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                        user.isActive ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </td>
-                <td className="max-w-[200px] px-4 py-3 text-right">
-                  <div className="flex flex-wrap justify-end gap-x-3 gap-y-2">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(user)}
-                      className={`text-sm font-semibold text-info underline decoration-info/35 underline-offset-2 ${DASH_TRANSITION} hover:decoration-info`}
-                    >
-                      Targets
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openPasswordModal(user)}
-                      className={`text-sm font-semibold text-text-primary underline decoration-border underline-offset-2 ${DASH_TRANSITION} hover:text-text-secondary`}
-                    >
-                      Password
-                    </button>
-                  </div>
-                </td>
+        {users.length === 0 ? (
+          <div className="px-6 py-14 text-center">
+            <p className="text-sm font-semibold text-text-primary">No team members yet</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              Add a @trivoxhq.com teammate to get started.
+            </p>
+            <div className="mt-5">
+              <Button type="button" onClick={openAddMember}>
+                Add member
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <table className="min-w-[1080px] w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-border bg-bg-secondary/70">
+                <th rowSpan={2} className={`align-bottom ${DASH_TABLE_TH}`}>
+                  Member
+                </th>
+                <th rowSpan={2} className={`whitespace-nowrap align-bottom ${DASH_TABLE_TH}`}>
+                  Role
+                </th>
+                <th
+                  colSpan={3}
+                  className="border-b border-border/70 px-4 pt-3 pb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-text-secondary/90"
+                >
+                  Bid targets
+                </th>
+                <th
+                  rowSpan={2}
+                  className={`whitespace-nowrap text-right align-bottom ${DASH_TABLE_TH}`}
+                >
+                  Monthly salary
+                </th>
+                <th rowSpan={2} className={`whitespace-nowrap align-bottom ${DASH_TABLE_TH}`}>
+                  Status
+                </th>
+                <th
+                  rowSpan={2}
+                  className={`whitespace-nowrap text-right align-bottom ${DASH_TABLE_TH}`}
+                >
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+              <tr className="border-b border-border bg-bg-secondary/45">
+                <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Daily</th>
+                <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Weekly</th>
+                <th className={`whitespace-nowrap text-right ${DASH_TABLE_TH}`}>Monthly</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/70">
+              {users.map((user) => {
+                const isYou = user.id === currentUserId;
+                const initials = initialsFromName(user.name);
+                return (
+                  <tr
+                    key={user.id}
+                    className={`${DASH_TABLE_ROW} ${user.isActive ? "" : "bg-bg-secondary/25"}`}
+                  >
+                    <td className="px-4 py-3.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-bg-secondary text-[11px] font-semibold tabular-nums tracking-tight text-text-primary shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.65)] dark:shadow-[inset_0_1px_0_0_rgb(255_255_255_/0.08)]"
+                          aria-hidden
+                        >
+                          {initials}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <span className="truncate font-semibold text-text-primary">
+                              {user.name}
+                            </span>
+                            {isYou ? (
+                              <span className="rounded border border-brand-primary/25 bg-brand-primary/8 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-brand-primary">
+                                You
+                              </span>
+                            ) : null}
+                            {!user.isActive ? (
+                              <span className="rounded border border-border bg-bg-secondary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
+                                Inactive
+                              </span>
+                            ) : null}
+                          </div>
+                          <p
+                            className="mt-0.5 truncate text-xs text-text-secondary"
+                            title={user.email}
+                          >
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-text-primary">
+                      {isYou ? (
+                        <span className="inline-flex rounded-md border border-border/80 bg-bg-secondary/60 px-2.5 py-1 text-xs font-medium text-text-primary">
+                          {roleLabel(user.role)}
+                        </span>
+                      ) : (
+                        <select
+                          className="min-w-38 rounded-lg border border-input-border bg-bg-primary px-2.5 py-1.5 text-sm text-text-primary outline-none transition-[border-color,box-shadow] duration-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          value={user.role}
+                          disabled={busyRoleId === user.id}
+                          aria-busy={busyRoleId === user.id}
+                          aria-label={`Role for ${user.name}`}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            if (isValidRole(next)) {
+                              void patchRole(user, next);
+                            }
+                          }}
+                        >
+                          {ASSIGNABLE_ROLES.map((role) => (
+                            <option key={role} value={role}>
+                              {roleLabel(role)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-text-primary">
+                      {formatMoney(user.dailyTarget)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-text-primary">
+                      {formatMoney(user.weeklyTarget)}
+                    </td>
+                    <td className="whitespace-nowrap border-r border-border/50 px-4 py-3.5 text-right tabular-nums text-text-primary">
+                      {formatMoney(user.monthlyTarget)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-right font-medium tabular-nums text-text-primary">
+                      {formatMoney(user.monthlySalary)}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={user.isActive}
+                          aria-busy={busyActiveId === user.id}
+                          aria-label={`${user.isActive ? "Deactivate" : "Activate"} ${user.name}`}
+                          disabled={
+                            busyActiveId === user.id ||
+                            (!!user.isActive && user.id === currentUserId)
+                          }
+                          title={
+                            user.isActive && user.id === currentUserId
+                              ? "You cannot deactivate your own account."
+                              : user.isActive
+                                ? "Click to deactivate"
+                                : "Click to activate"
+                          }
+                          onClick={() => patchActive(user, !user.isActive)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/35 disabled:cursor-not-allowed disabled:opacity-50 ${DASH_TRANSITION} ${
+                            user.isActive
+                              ? "border-brand-primary/40 bg-brand-primary"
+                              : "border-border bg-bg-secondary"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                              user.isActive ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                        <span
+                          className={`text-xs font-medium ${
+                            user.isActive ? "text-brand-primary" : "text-text-secondary"
+                          }`}
+                        >
+                          {user.isActive ? "Active" : "Off"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="inline-flex flex-wrap justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditTargets(user)}
+                          className={DASH_BTN_TABLE}
+                        >
+                          Targets
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditSalary(user)}
+                          className={DASH_BTN_TABLE}
+                        >
+                          Salary
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPasswordModal(user)}
+                          className={DASH_BTN_TABLE}
+                        >
+                          Password
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <AnimatePresence>
-        {editing ? (
+        {editing && editKind === "targets" ? (
           <motion.div
             role="presentation"
             className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[2px] supports-backdrop-filter:bg-text-primary/35"
@@ -588,15 +776,20 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
               transition={modalAnimation.transition}
               onPointerDown={(ev) => ev.stopPropagation()}
             >
-              <h2 id={titleId} className="text-lg font-semibold tracking-tight text-text-primary">
-                Edit targets
-              </h2>
-              <p className="mt-1 text-sm text-text-secondary">{editing.name}</p>
+              <div className="border-b border-border/70 pb-4">
+                <p className={DASH_SECTION_TITLE}>Bid targets</p>
+                <h2 id={titleId} className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary">
+                  Edit targets
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">
+                  Daily, weekly, and monthly targets for {editing.name}
+                </p>
+              </div>
 
-              <form className="mt-6 space-y-4" onSubmit={submitTargets}>
+              <form className="mt-5 space-y-4" onSubmit={submitTargets}>
                 <div>
                   <label className={labelClass} htmlFor="edit-daily-target">
-                    Daily target
+                    Daily
                   </label>
                   <input
                     id="edit-daily-target"
@@ -612,7 +805,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="edit-weekly-target">
-                    Weekly target
+                    Weekly
                   </label>
                   <input
                     id="edit-weekly-target"
@@ -628,7 +821,7 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="edit-monthly-target">
-                    Monthly target
+                    Monthly
                   </label>
                   <input
                     id="edit-monthly-target"
@@ -658,7 +851,90 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
                     disabled={savingTargets}
                     className={`inline-flex min-h-[44px] items-center justify-center rounded-lg border border-brand-primary bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:border-brand-hover hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60 ${DASH_TRANSITION} focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/35`}
                   >
-                    {savingTargets ? "Saving…" : "Save"}
+                    {savingTargets ? "Saving…" : "Save targets"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editing && editKind === "salary" ? (
+          <motion.div
+            role="presentation"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-[2px] supports-backdrop-filter:bg-text-primary/35"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            onPointerDown={(ev) => {
+              if (ev.target === ev.currentTarget && !savingTargets) closeModal();
+            }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`${titleId}-salary`}
+              className={`w-full max-w-md rounded-2xl border border-border/90 bg-bg-primary p-6 sm:p-7 ${DASH_MODAL_PANEL}`}
+              initial={modalAnimation.initial}
+              animate={modalAnimation.animate}
+              exit={modalAnimation.initial}
+              transition={modalAnimation.transition}
+              onPointerDown={(ev) => ev.stopPropagation()}
+            >
+              <div className="border-b border-border/70 pb-4">
+                <p className={DASH_SECTION_TITLE}>Attendance pay</p>
+                <h2
+                  id={`${titleId}-salary`}
+                  className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary"
+                >
+                  Edit monthly salary
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">
+                  Separate from bid targets · {editing.name}
+                </p>
+              </div>
+
+              <form className="mt-5 space-y-4" onSubmit={submitSalary}>
+                <div>
+                  <label className={labelClass} htmlFor="edit-monthly-salary">
+                    Monthly salary
+                  </label>
+                  <input
+                    id="edit-monthly-salary"
+                    type="number"
+                    min={0}
+                    step={1}
+                    required
+                    className={inputClass}
+                    value={monthlySalaryStr}
+                    onChange={(e) => setMonthlySalaryStr(e.target.value)}
+                    disabled={savingTargets}
+                  />
+                  <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">
+                    Day pay ≈ monthly ÷ working days/month. Check-out pro-rates by worked
+                    minutes.
+                  </p>
+                </div>
+
+                {modalError ? (
+                  <p className="text-sm text-danger" role="alert">
+                    {modalError}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-wrap justify-end gap-2 pt-2">
+                  <Button variant="secondary" type="button" onClick={closeModal}>
+                    Cancel
+                  </Button>
+                  <button
+                    type="submit"
+                    disabled={savingTargets}
+                    className={`inline-flex min-h-[44px] items-center justify-center rounded-lg border border-brand-primary bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:border-brand-hover hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60 ${DASH_TRANSITION} focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/35`}
+                  >
+                    {savingTargets ? "Saving…" : "Save salary"}
                   </button>
                 </div>
               </form>
@@ -691,12 +967,20 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
               transition={modalAnimation.transition}
               onPointerDown={(ev) => ev.stopPropagation()}
             >
-              <h2 id={passwordTitleId} className="text-lg font-semibold tracking-tight text-text-primary">
-                Set password
-              </h2>
-              <p className="mt-1 text-sm text-text-secondary">{passwordFor.email}</p>
+              <div className="border-b border-border/70 pb-4">
+                <p className={DASH_SECTION_TITLE}>Security</p>
+                <h2
+                  id={passwordTitleId}
+                  className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary"
+                >
+                  Set password
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {passwordFor.name} · {passwordFor.email}
+                </p>
+              </div>
 
-              <form className="mt-6 space-y-4" onSubmit={submitPassword}>
+              <form className="mt-5 space-y-4" onSubmit={submitPassword}>
                 <div>
                   <label className={labelClass} htmlFor="admin-new-password">
                     New password
@@ -776,12 +1060,20 @@ export function UsersAdminTable({ currentUserId }: { currentUserId: string }) {
               transition={modalAnimation.transition}
               onPointerDown={(ev) => ev.stopPropagation()}
             >
-              <h2 id={addMemberTitleId} className="text-lg font-semibold tracking-tight text-text-primary">
-                Add team member
-              </h2>
-              <p className="mt-1 text-sm text-text-secondary">Email must be a @trivoxhq.com address.</p>
+              <div className="border-b border-border/70 pb-4">
+                <p className={DASH_SECTION_TITLE}>Invitation</p>
+                <h2
+                  id={addMemberTitleId}
+                  className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary"
+                >
+                  Add team member
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">
+                  Email must use a @trivoxhq.com address.
+                </p>
+              </div>
 
-              <form className="mt-6 space-y-4" onSubmit={submitAddMember}>
+              <form className="mt-5 space-y-4" onSubmit={submitAddMember}>
                 <div>
                   <label className={labelClass} htmlFor="add-member-name">
                     Name

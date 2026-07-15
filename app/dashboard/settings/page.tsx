@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { CatalogSettingsClient } from "@/components/dashboard/catalog-settings-client";
+import { AttendanceSettingsPanel } from "@/components/dashboard/attendance-settings-panel";
 import { DashboardPageHero } from "@/components/dashboard/dashboard-page-hero";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canManageSettings } from "@/lib/auth/roles";
@@ -18,7 +19,7 @@ export default async function DashboardSettingsPage() {
       <DashboardPageHero
         eyebrow="Administration"
         title="Settings"
-        description="Manage profile and niche labels used in the bid log. Deactivated items stay on historical bids but no longer appear when adding new bids."
+        description="Manage catalog labels and attendance rules. Attendance rule edits require ATTENDANCE_ADMIN_KEY — admin login alone is not enough."
         breadcrumb={[
           { href: "/dashboard", label: "Dashboard" },
           { label: "Settings" },
@@ -26,6 +27,7 @@ export default async function DashboardSettingsPage() {
       />
 
       <CatalogSettingsClient />
+      <AttendanceSettingsPanel />
     </div>
   );
 }

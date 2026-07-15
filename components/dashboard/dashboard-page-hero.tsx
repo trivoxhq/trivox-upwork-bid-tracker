@@ -11,60 +11,71 @@ type DashboardPageHeroProps = {
 };
 
 /**
- * Shared “nav page” header: accent stripe, soft glow, optional breadcrumb trail.
+ * Compact page header strip — eyebrow + title inline, short description beside on wide screens.
  */
-export function DashboardPageHero({ eyebrow, title, description, breadcrumb }: DashboardPageHeroProps) {
+export function DashboardPageHero({
+  eyebrow,
+  title,
+  description,
+  breadcrumb,
+}: DashboardPageHeroProps) {
   return (
-    <header className="relative overflow-hidden rounded-2xl border border-border/50 bg-bg-primary/90 px-5 py-6 shadow-[0_4px_36px_rgb(17_17_17_/0.07),0_0_0_1px_rgb(255_255_255_/0.8)_inset] backdrop-blur-sm dark:border-border dark:shadow-[0_4px_36px_rgb(0_0_0_/0.45),inset_0_0_0_1px_rgb(255_255_255_/0.05)] sm:px-8 sm:py-8">
+    <header className="relative overflow-hidden rounded-xl border border-border/70 bg-bg-primary shadow-sm">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-linear-to-r from-brand-primary via-[#1aad4a] to-transparent dark:from-brand-primary dark:via-[#12b892] dark:to-transparent"
+        className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-brand-primary"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -right-20 -top-28 h-56 w-56 rounded-full bg-brand-primary/11 blur-3xl dark:bg-brand-primary/10"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-info/6 blur-3xl dark:bg-[rgb(255_255_255_/0.04)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-brand-primary/50 via-brand-primary/15 to-transparent"
         aria-hidden
       />
 
-      <div className="relative">
+      <div className="relative pl-[calc(0.75rem+3px)] pr-3 py-3 sm:pl-[calc(1rem+3px)] sm:pr-4 sm:py-3.5">
         {breadcrumb && breadcrumb.length > 0 ? (
-          <nav className="text-[13px] text-text-secondary" aria-label="Breadcrumb">
+          <nav
+            className="mb-1.5 flex flex-wrap items-center gap-x-1.5 text-[11px] leading-none text-text-secondary"
+            aria-label="Breadcrumb"
+          >
             {breadcrumb.map((item, i) => (
-              <span key={`${item.label}-${i}`}>
+              <span key={`${item.label}-${i}`} className="inline-flex items-center gap-x-1.5">
                 {i > 0 ? (
-                  <span className="mx-2 font-light text-text-secondary/35" aria-hidden>
+                  <span className="text-text-secondary/40" aria-hidden>
                     /
                   </span>
                 ) : null}
                 {item.href ? (
                   <Link
                     href={item.href}
-                    className="font-semibold text-text-secondary transition-colors hover:text-brand-primary"
+                    className="font-medium text-text-secondary transition-colors hover:text-brand-primary"
                   >
                     {item.label}
                   </Link>
                 ) : (
-                  <span className="font-semibold text-text-primary">{item.label}</span>
+                  <span className="font-medium text-text-primary">{item.label}</span>
                 )}
               </span>
             ))}
           </nav>
         ) : null}
 
-        <p
-          className={`text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-primary ${breadcrumb?.length ? "mt-5" : ""}`}
-        >
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-text-primary sm:text-[1.85rem] sm:leading-[1.15]">
-          {title}
-        </h1>
-        {description ? (
-          <div className="mt-3 max-w-2xl text-sm leading-relaxed text-text-secondary">{description}</div>
-        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+              <span className="inline-flex shrink-0 items-center rounded border border-brand-primary/25 bg-brand-primary/8 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-primary">
+                {eyebrow}
+              </span>
+              <h1 className="truncate text-lg font-bold tracking-tight text-text-primary sm:text-xl">
+                {title}
+              </h1>
+            </div>
+          </div>
+
+          {description ? (
+            <div className="max-w-xl text-[13px] leading-snug text-text-secondary sm:max-w-md sm:text-right sm:leading-snug lg:max-w-lg">
+              {description}
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
   );

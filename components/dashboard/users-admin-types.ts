@@ -8,6 +8,8 @@ export type AdminUserRow = {
   dailyTarget: number;
   weeklyTarget: number;
   monthlyTarget: number;
+  hourlyRate: number;
+  monthlySalary: number;
   isActive: boolean;
   createdAt: string;
 };

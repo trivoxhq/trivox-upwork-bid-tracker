@@ -7,6 +7,8 @@ export const ADMIN_USER_PUBLIC_SELECT = {
   dailyTarget: true,
   weeklyTarget: true,
   monthlyTarget: true,
+  hourlyRate: true,
+  monthlySalary: true,
   isActive: true,
   createdAt: true,
 } as const;

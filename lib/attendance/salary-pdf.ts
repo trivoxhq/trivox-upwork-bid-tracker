@@ -11,8 +11,8 @@ function money(n: number): string {
 
 function dayTypeLabel(dayType: string | null, status: string): string {
   if (status === "open") return "Open";
-  if (dayType === "half_day") return "Half day";
-  if (dayType === "full_day") return "Full day";
+  if (dayType === "half_day") return "Half-Day Check-Out";
+  if (dayType === "full_day") return "Check Out";
   return dayType?.replace("_", " ") ?? status;
 }
 

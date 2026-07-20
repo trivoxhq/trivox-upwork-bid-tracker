@@ -22,7 +22,7 @@ export default async function DashboardAttendancePage() {
         description={
           isAdmin
             ? "Administrators are exempt from check-in. Review days attended per member and download monthly salary PDFs."
-            : "Check in/out, breaks, half day vs full day. Pay is calculated from your monthly salary and worked minutes."
+            : "Check in/out and breaks. Leave early as Half-Day Check-Out, or Check Out after full-day hours. Pay is calculated from your monthly salary and worked minutes."
         }
         breadcrumb={[
           { href: "/dashboard", label: "Dashboard" },

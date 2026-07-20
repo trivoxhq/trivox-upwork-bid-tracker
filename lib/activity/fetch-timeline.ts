@@ -48,7 +48,7 @@ function attendanceTitle(
   event: ActivityAttendanceMeta["event"],
   recordStatus: string,
 ): string {
-  if (event === "half_day") return "Half day check-out";
+  if (event === "half_day") return "Half-Day Check-Out";
   if (event === "check_out") return "Checked out";
   if (recordStatus === "open") return "Checked in · session open";
   return "Checked in";
@@ -74,8 +74,9 @@ function buildAttendanceMeta(
   },
 ): { summary: string; attendance: ActivityAttendanceMeta } {
   const lower = summary.toLowerCase();
-  const isHalf = lower.includes("half day");
-  const isOut = isHalf || lower.includes("check out") || lower.startsWith("checkout");
+  const isHalf = lower.includes("half day") || lower.includes("half-day");
+  const isOut =
+    isHalf || lower.includes("check out") || lower.includes("check-out") || lower.startsWith("checkout");
   const event: ActivityAttendanceMeta["event"] = isHalf
     ? "half_day"
     : isOut

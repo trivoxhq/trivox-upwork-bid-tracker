@@ -2,7 +2,7 @@
 
 ## Overview
 
-Users check in and check out daily. A normal shift is **9 hours total** with a **60-minute break** allowance and **8 hours** of required working time for a full day. Early exit is allowed as **Half day** after **5 hours** of working time. Salary is calculated from recorded working hours. Checkout always requires a daily task summary. **IP/device logging is mandatory.** Screenshot/activity tracking can be **turned on/off with one click** (admin + special key).
+Users check in and check out daily. A normal shift targets **8 hours** of working time for a full-day **Check Out**. Leaving earlier is allowed as **Half-Day Check-Out**, with pay pro-rated from worked minutes. A **60-minute** break allowance applies. Checkout always requires a daily task summary. **IP/device logging is mandatory.** Screenshot/activity tracking can be **turned on/off with one click** (admin + special key).
 
 ## Configurable shift rules (admin + special key)
 
@@ -10,10 +10,11 @@ These values are **not** editable by admin login alone. Editing requires **admin
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `shiftTotalMinutes` | 540 (9h) | Full-day shift clock; at this point the button becomes **Check out** |
+| `shiftTotalMinutes` | 540 (9h) | Reference shift clock length |
 | `breakAllowanceMinutes` | 60 | Paid break allowance; Start break disables when fully used |
-| `minFullDayWorkingMinutes` | 480 (8h) | Required working time for full-day checkout |
-| `minHalfDayWorkingMinutes` | 300 (5h) | Required working time for half-day leave |
+| `minFullDayWorkingMinutes` | 480 (8h) | Working time required for full-day **Check Out** |
+| `minHalfDayWorkingMinutes` | 300 (5h) | Legacy threshold (early leave is always Half-Day Check-Out until full-day hours) |
+| `workingDaysPerMonth` | 22 | Used for monthly → daily salary pro-rate |
 
 Configure the key in `.env.local`:
 
@@ -23,10 +24,12 @@ ATTENDANCE_ADMIN_KEY=your-secret-key-here
 
 ## Checkout button behavior
 
-| Condition | Button label | Recorded as | Min working hours |
-|-----------|--------------|-------------|-------------------|
-| Working ≥ 5h and **before** the 9th hour | **Half day** | `half_day` | 5 hours |
-| At / after the **9th hour** from check-in | **Check out** | `full_day` | 8 hours working |
+| Condition | Button / status label | Recorded as | Pay |
+|-----------|----------------------|-------------|-----|
+| Working time **below** full-day minimum | **Half-Day Check-Out** | `half_day` | Pro-rated from worked minutes |
+| Working time **≥** full-day minimum | **Check Out** | `full_day` | Pro-rated from worked minutes (full day when ~8h) |
+
+Checkout is always available after check-in — there is no locked leave state.
 
 Working time = `(checkOut − checkIn) − breakMinutes` (all break time, including overrun).
 

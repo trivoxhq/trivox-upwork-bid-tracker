@@ -10,6 +10,6 @@ export const MIN_SUMMARY_LENGTH = 20;
 
 export const WORK_TIMEZONE = "Asia/Karachi";
 
-export type LeaveButtonMode = "locked" | "half_day" | "check_out";
+export type LeaveButtonMode = "half_day" | "check_out" | "locked";
 
 export type AttendanceDayType = "half_day" | "full_day";

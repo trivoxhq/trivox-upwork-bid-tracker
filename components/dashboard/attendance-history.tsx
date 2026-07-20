@@ -87,8 +87,12 @@ export function AttendanceHistory({ team = false }: { team?: boolean }) {
                   </td>
                   <td className="px-4 py-3">{r.workingLabel}</td>
                   <td className="px-4 py-3">{r.breakLabel}</td>
-                  <td className="px-4 py-3 capitalize">
-                    {r.dayType?.replace("_", " ") ?? r.status}
+                  <td className="px-4 py-3">
+                    {r.dayType === "half_day"
+                      ? "Half-Day Check-Out"
+                      : r.dayType === "full_day"
+                        ? "Check Out"
+                        : (r.dayType?.replace("_", " ") ?? r.status)}
                   </td>
                   <td className="px-4 py-3 tabular-nums">
                     {r.salaryAmount != null ? `$${r.salaryAmount}` : "—"}

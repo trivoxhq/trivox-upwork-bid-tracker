@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getCurrentUser } from "@/lib/auth/session";
-import { getRoleCapabilities } from "@/lib/auth/roles";
+import { canTrackAttendance, getRoleCapabilities } from "@/lib/auth/roles";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -20,6 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         roleLabel: caps.label,
         isAdmin: caps.canManageUsers,
         canWrite: caps.canWrite,
+        canTrackAttendance: canTrackAttendance(user.role),
       }}
     >
       {children}

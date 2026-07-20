@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       action: "updated",
       entityType: "attendance",
       entityId: record.id,
-      summary: `${validated.dayType === "half_day" ? "Half day" : "Check out"} — ${validated.workingMinutes}m work · pay ${validated.salaryAmount}`,
+      summary: `${validated.dayType === "half_day" ? "Half-Day Check-Out" : "Check Out"} — ${validated.workingMinutes}m work · pay ${validated.salaryAmount}`,
     });
 
     return NextResponse.json({

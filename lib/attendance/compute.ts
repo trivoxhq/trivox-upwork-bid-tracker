@@ -83,13 +83,9 @@ export function computeLiveSnapshot(
   const remainingToHalfDay = Math.max(0, settings.minHalfDayWorkingMinutes - workingMinutes);
   const remainingToFullDay = Math.max(0, settings.minFullDayWorkingMinutes - workingMinutes);
 
-  let leaveButtonMode: LeaveButtonMode = "locked";
-  if (elapsedMinutes >= settings.shiftTotalMinutes) {
-    leaveButtonMode =
-      workingMinutes >= settings.minFullDayWorkingMinutes ? "check_out" : "locked";
-  } else if (workingMinutes >= settings.minHalfDayWorkingMinutes) {
-    leaveButtonMode = "half_day";
-  }
+  // Full-day hours met → Check Out. Otherwise early leave is Half-Day Check-Out (always allowed).
+  const leaveButtonMode: LeaveButtonMode =
+    workingMinutes >= settings.minFullDayWorkingMinutes ? "check_out" : "half_day";
 
   return {
     elapsedMinutes,
@@ -152,37 +148,16 @@ export function validateCheckout(params: {
     fullDayWorkingMinutes: params.settings.minFullDayWorkingMinutes,
   });
 
-  const isFullShift = live.elapsedMinutes >= params.settings.shiftTotalMinutes;
-  if (isFullShift) {
-    if (live.workingMinutes < params.settings.minFullDayWorkingMinutes) {
-      return {
-        ok: false,
-        message: `Need ${params.settings.minFullDayWorkingMinutes - live.workingMinutes} more working minutes for full-day checkout.`,
-      };
-    }
-    return {
-      ok: true,
-      workingMinutes: live.workingMinutes,
-      breakMinutes: live.breakMinutes,
-      excessBreakMinutes: live.excessBreakMinutes,
-      dayType: "full_day",
-      salaryAmount,
-    };
-  }
-
-  if (live.workingMinutes < params.settings.minHalfDayWorkingMinutes) {
-    return {
-      ok: false,
-      message: `Need ${params.settings.minHalfDayWorkingMinutes - live.workingMinutes} more working minutes for half day.`,
-    };
-  }
+  // Full-day working minutes met → full day. Any earlier checkout → half-day (pay pro-rated).
+  const dayType: AttendanceDayType =
+    live.workingMinutes >= params.settings.minFullDayWorkingMinutes ? "full_day" : "half_day";
 
   return {
     ok: true,
     workingMinutes: live.workingMinutes,
     breakMinutes: live.breakMinutes,
     excessBreakMinutes: live.excessBreakMinutes,
-    dayType: "half_day",
+    dayType,
     salaryAmount,
   };
 }

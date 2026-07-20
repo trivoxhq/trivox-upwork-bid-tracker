@@ -12,6 +12,7 @@ import {
   DASH_SECTION_TITLE,
   DASH_TRANSITION,
 } from "@/components/dashboard/dashboard-classes";
+import { AttendanceCheckInPrompt } from "@/components/dashboard/attendance-check-in-prompt";
 import { DashboardAddBidTrigger } from "@/components/dashboard/dashboard-add-bid-trigger";
 import { DashboardExportBidsButton } from "@/components/dashboard/dashboard-export-csv-button";
 import { DashboardResetBidsButton } from "@/components/dashboard/dashboard-reset-bids-button";
@@ -26,6 +27,7 @@ export type DashboardShellUser = {
   roleLabel: string;
   isAdmin: boolean;
   canWrite: boolean;
+  canTrackAttendance: boolean;
 };
 
 type DashboardShellProps = {
@@ -820,6 +822,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <AttendanceCheckInPrompt enabled={user.canTrackAttendance} />
     </div>
   );
 }

@@ -156,7 +156,11 @@ export function AttendancePanel({
     }
     const ok = await postAction("/api/attendance/check-out", { dailySummary: summary });
     if (ok) {
-      toast.success(data?.record?.leaveButtonMode === "half_day" ? "Half day recorded." : "Checked out.");
+      toast.success(
+        data?.record?.leaveButtonMode === "half_day"
+          ? "Half-day check-out recorded."
+          : "Checked out.",
+      );
       setCheckoutOpen(false);
       setSummary("");
       await load();
@@ -174,11 +178,7 @@ export function AttendancePanel({
   const { record, settings } = data;
   const open = record?.status === "open";
   const leaveLabel =
-    record?.leaveButtonMode === "check_out"
-      ? "Check out"
-      : record?.leaveButtonMode === "half_day"
-        ? "Half day"
-        : "Leave locked";
+    record?.leaveButtonMode === "check_out" ? "Check Out" : "Half-Day Check-Out";
 
   return (
     <div className="space-y-6">
@@ -193,9 +193,9 @@ export function AttendancePanel({
         <h2 className={DASH_SECTION_TITLE}>Today</h2>
         <p className={`${DASH_SECTION_SUBTITLE} mt-1`}>
           Shift {Math.round(settings.shiftTotalMinutes / 60)}h · break{" "}
-          {settings.breakAllowanceMinutes}m · full day {Math.round(settings.minFullDayWorkingMinutes / 60)}h
-          work · half day {Math.round(settings.minHalfDayWorkingMinutes / 60)}h work ·{" "}
-          {settings.workingDaysPerMonth} working days/month for salary
+          {settings.breakAllowanceMinutes}m · full day{" "}
+          {Math.round(settings.minFullDayWorkingMinutes / 60)}h work (Check Out) · earlier leave
+          is Half-Day Check-Out · {settings.workingDaysPerMonth} working days/month for salary
         </p>
 
         {adminExempt ? (
@@ -234,10 +234,12 @@ export function AttendancePanel({
                 record.status === "open"
                   ? record.onBreak
                     ? "On break"
-                    : "Working"
+                    : record.leaveButtonMode === "check_out"
+                      ? "Ready to Check Out"
+                      : "Working · Half-Day Check-Out available"
                   : record.dayType === "half_day"
-                    ? "Half day"
-                    : "Completed"
+                    ? "Half-Day Check-Out"
+                    : "Check Out"
               }
             />
             {record.checkOutAt ? <Stat label="Check out" value={formatClock(record.checkOutAt)} /> : null}
@@ -299,30 +301,24 @@ export function AttendancePanel({
             )}
             <button
               type="button"
-              className={`${DASH_BTN_TOOLBAR} ${
-                record.leaveButtonMode === "locked"
-                  ? "opacity-60"
-                  : "border-brand-primary bg-brand-primary text-white hover:bg-brand-hover"
-              }`}
-              disabled={busy || record.leaveButtonMode === "locked"}
+              className={`${DASH_BTN_TOOLBAR} border-brand-primary bg-brand-primary text-white hover:bg-brand-hover`}
+              disabled={busy}
               onClick={() => setCheckoutOpen(true)}
               title={
-                record.leaveButtonMode === "locked"
-                  ? record.remainingToHalfDay != null && record.remainingToHalfDay > 0
-                    ? `${record.remainingToHalfDay}m more working time for half day`
-                    : record.remainingToFullDay != null && record.remainingToFullDay > 0
-                      ? `${record.remainingToFullDay}m more working time for checkout`
-                      : "Leave locked"
-                  : leaveLabel
+                record.leaveButtonMode === "check_out"
+                  ? "Full-day hours met — check out"
+                  : record.remainingToFullDay != null && record.remainingToFullDay > 0
+                    ? `Half-Day Check-Out · ${record.remainingToFullDay}m more work for full-day Check Out`
+                    : "Half-Day Check-Out"
               }
             >
               {leaveLabel}
             </button>
-            {record.leaveButtonMode === "locked" && record.remainingToShiftEnd != null ? (
+            {record.leaveButtonMode === "half_day" &&
+            record.remainingToFullDay != null &&
+            record.remainingToFullDay > 0 ? (
               <span className="self-center text-xs text-text-secondary">
-                {record.remainingToShiftEnd > 0
-                  ? `${record.remainingToShiftEnd}m until Check out label · need ${record.remainingToHalfDay ?? 0}m work for Half day`
-                  : `Need ${record.remainingToFullDay ?? 0}m more work for Check out`}
+                {record.remainingToFullDay}m more working time for full-day Check Out
               </span>
             ) : null}
           </div>
